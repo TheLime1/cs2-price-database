@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import os
 import re
+import signal
+import sys
 
 
 def parse_date(date_str: str) -> datetime:
@@ -61,6 +63,11 @@ class PriceCollector:
         self.checkpoint_path = checkpoint_path
         self.ignore_stattrak = ignore_stattrak
         self.steam_client = SteamMarketAPIClient()
+        self.shutdown_requested = False
+
+        # API rate tracking for testing
+        self.api_call_log = []
+        self.rate_test_enabled = True  # Set to False to disable rate tracking
 
         # Load database
         self.load_database()
@@ -79,6 +86,122 @@ class PriceCollector:
             'start_time': None,
             'last_update': None
         }
+
+        # Set up signal handlers for graceful shutdown
+        self.setup_signal_handlers()
+
+        # Initialize API rate test log
+        if self.rate_test_enabled:
+            self.init_rate_test_log()
+
+    def init_rate_test_log(self):
+        """Initialize the API rate test log file"""
+        with open('api_rate_test.log', 'w', encoding='utf-8') as f:
+            f.write(
+                f"API Rate Limit Test Log - Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(
+                "Format: Timestamp | Status | Success | Response Time | Item Name\n")
+            f.write("=" * 80 + "\n\n")
+        logger.info("📊 API rate testing enabled - logging to api_rate_test.log")
+
+    def log_api_call(self, market_hash_name: str, status_code: int, success: bool, response_time: float = 0):
+        """Log API call details for rate limit testing"""
+        if not self.rate_test_enabled:
+            return
+
+        timestamp = datetime.now()
+
+        # Add to memory log
+        self.api_call_log.append({
+            'timestamp': timestamp,
+            'market_hash_name': market_hash_name,
+            'status_code': status_code,
+            'success': success,
+            'response_time': response_time
+        })
+
+        # Write to file immediately
+        log_entry = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} | Status: {status_code} | Success: {success} | Time: {response_time:.3f}s | Item: {market_hash_name}\n"
+
+        with open('api_rate_test.log', 'a', encoding='utf-8') as f:
+            f.write(log_entry)
+
+        # Calculate and log rate every 10 calls  
+        if len(self.api_call_log) % 10 == 0:
+            now = datetime.now()
+            one_min_ago = now - timedelta(minutes=1)
+            recent = [c for c in self.api_call_log if c['timestamp'] > one_min_ago]
+            
+            calls_per_min = len(recent)
+            rate_limits = len([c for c in recent if c.get('status_code') == 429])
+            errors = len([c for c in recent if not c['success']])
+            
+            log_line = f"{now.strftime('%H:%M:%S')} | {calls_per_min}/min | {rate_limits} limits | {errors} errors | {len(self.api_call_log)} total\\n"
+            
+            with open('api_rate_test.log', 'a', encoding='utf-8') as f:
+                f.write(log_line)
+            
+            if errors > 0:
+                logger.warning(f"API issues: {errors} errors, {rate_limits} rate limits in last minute")
+
+    def log_rate_statistics(self):
+        """Calculate and log current API call rate"""
+        if not self.rate_test_enabled or len(self.api_call_log) < 2:
+            return
+
+        now = datetime.now()
+
+        # Calculate calls in last minute
+        one_minute_ago = now - timedelta(minutes=1)
+        recent_calls = [
+            call for call in self.api_call_log if call['timestamp'] > one_minute_ago]
+        calls_per_minute = len(recent_calls)
+
+        # Calculate calls in last 5 minutes
+        five_minutes_ago = now - timedelta(minutes=5)
+        five_min_calls = [
+            call for call in self.api_call_log if call['timestamp'] > five_minutes_ago]
+        calls_per_5min = len(five_min_calls)
+
+        # Count rate limit hits (status 429)
+        rate_limit_hits = len(
+            [call for call in recent_calls if call['status_code'] == 429])
+
+        # Log summary
+        summary = f"\n--- RATE SUMMARY at {now.strftime('%H:%M:%S')} ---\n"
+        summary += f"Calls in last 1 min: {calls_per_minute}\n"
+        summary += f"Calls in last 5 min: {calls_per_5min} (avg {calls_per_5min/5:.1f}/min)\n"
+        summary += f"Rate limit hits (429) in last min: {rate_limit_hits}\n"
+        summary += f"Total API calls logged: {len(self.api_call_log)}\n"
+        summary += "-" * 50 + "\n\n"
+
+        with open('api_rate_test.log', 'a', encoding='utf-8') as f:
+            f.write(summary)
+
+        # Also log to console if rate limit hit
+        if rate_limit_hits > 0:
+            logger.warning(
+                f"🚨 RATE LIMIT HIT! {rate_limit_hits} times in last minute. Calls/min: {calls_per_minute}")
+
+    def setup_signal_handlers(self):
+        """Set up signal handlers for graceful shutdown"""
+        def signal_handler(signum, frame):
+            logger.info(
+                f"Received signal {signum} - initiating graceful shutdown...")
+            self.shutdown_requested = True
+
+        # Handle SIGINT (Ctrl+C) and SIGTERM
+        signal.signal(signal.SIGINT, signal_handler)
+        if hasattr(signal, 'SIGTERM'):  # SIGTERM may not be available on Windows
+            signal.signal(signal.SIGTERM, signal_handler)
+
+    def graceful_shutdown(self):
+        """Perform graceful shutdown operations"""
+        logger.info("Performing graceful shutdown...")
+        self.save_checkpoint()
+        self.save_database()
+        logger.info("All data saved. Shutdown complete.")
+        sys.exit(0)
 
     def load_database(self):
         """Load the skins database"""
@@ -174,15 +297,24 @@ class PriceCollector:
 
     async def collect_price_for_variant(self, skin: Dict, variant: Dict, stattrak: bool = False) -> Optional[Dict]:
         """Collect price for a single skin variant"""
+        market_hash_name = self.create_market_hash_name(
+            skin, variant, stattrak)
+
         try:
-            market_hash_name = self.create_market_hash_name(
-                skin, variant, stattrak)
+            # Record start time for response time tracking
+            start_time = datetime.now()
 
             # Get price from Steam Market API
             # USD
             price_data = await self.steam_client.get_item_price(market_hash_name, currency=1)
 
+            # Calculate response time
+            response_time = (datetime.now() - start_time).total_seconds()
+
             if price_data and price_data.get('success'):
+                # Log successful API call
+                self.log_api_call(market_hash_name, 200, True, response_time)
+
                 # Parse price strings (e.g., "$123.45" -> 123.45)
                 lowest_price = price_data.get('lowest_price', '$0.00')
                 median_price = price_data.get('median_price', '$0.00')
@@ -215,11 +347,18 @@ class PriceCollector:
                     'raw_data': price_data
                 }
             else:
+                # Log failed API call (could be rate limit or other error)
+                status_code = 429 if not price_data else 404
+                self.log_api_call(market_hash_name, status_code, False, response_time)
+
                 logger.warning(f"✗ No price data for {market_hash_name}")
                 self.stats['failed_requests'] += 1
                 return None
 
         except Exception as e:
+            # Log exception as failed call
+            self.log_api_call(market_hash_name, 500, False, 0)
+
             logger.error(f"Error collecting price for {market_hash_name}: {e}")
             self.stats['failed_requests'] += 1
             return None
@@ -239,6 +378,8 @@ class PriceCollector:
             if normal_price:
                 variant['prices']['normal'].update(normal_price)
                 success_count += 1
+                # Save immediately after successful price collection to prevent data loss
+                self.save_database()
 
             self.stats['processed_variants'] += 1
 
@@ -251,6 +392,8 @@ class PriceCollector:
                 if stattrak_price:
                     variant['prices']['stattrak'].update(stattrak_price)
                     success_count += 1
+                    # Save immediately after successful price collection to prevent data loss
+                    self.save_database()
 
                 self.stats['processed_variants'] += 1
                 await asyncio.sleep(0.2)
@@ -325,6 +468,11 @@ class PriceCollector:
         # Process skins
         async with self.steam_client:
             for i, (skin, intro_date) in enumerate(skins_with_dates[start_index:], start_index):
+                # Check for shutdown request
+                if self.shutdown_requested:
+                    logger.info("Shutdown requested - stopping collection...")
+                    break
+
                 try:
                     logger.info(
                         "\\n[%d/%d] Processing: %s (%d)", i+1, len(skins_with_dates), skin['full_name'], intro_date.year)
@@ -335,22 +483,32 @@ class PriceCollector:
                     self.checkpoint['processed_skins'] = self.stats['processed_skins']
                     self.checkpoint['last_processed_skin_id'] = skin['id']
 
-                    # Save progress every 5 skins
+                    # Save checkpoint after each skin to prevent loss of progress
+                    self.save_checkpoint()
+
+                    # Print progress every 5 skins
                     if (i + 1) % 5 == 0:
-                        self.save_checkpoint()
-                        self.save_database()
                         self.print_progress()
 
                     # Shorter delay between skins for better rate utilization
                     await asyncio.sleep(1.0)
 
                 except KeyboardInterrupt:
-                    logger.info("Process interrupted by user")
+                    logger.info(
+                        "Process interrupted by user - saving current progress...")
+                    # Ensure we save any completed work before exiting
+                    self.save_checkpoint()
+                    self.save_database()
+                    logger.info("Progress saved. Safe to exit.")
                     break
                 except Exception as e:
                     logger.error(
                         f"Error processing skin {skin['full_name']}: {e}")
                     continue
+
+        # Check if shutdown was requested and perform graceful shutdown
+        if self.shutdown_requested:
+            self.graceful_shutdown()
 
         # Final save
         self.save_checkpoint()
