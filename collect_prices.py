@@ -126,23 +126,26 @@ class PriceCollector:
         with open('api_rate_test.log', 'a', encoding='utf-8') as f:
             f.write(log_entry)
 
-        # Calculate and log rate every 10 calls  
+        # Calculate and log rate every 10 calls
         if len(self.api_call_log) % 10 == 0:
             now = datetime.now()
             one_min_ago = now - timedelta(minutes=1)
-            recent = [c for c in self.api_call_log if c['timestamp'] > one_min_ago]
-            
+            recent = [
+                c for c in self.api_call_log if c['timestamp'] > one_min_ago]
+
             calls_per_min = len(recent)
-            rate_limits = len([c for c in recent if c.get('status_code') == 429])
+            rate_limits = len(
+                [c for c in recent if c.get('status_code') == 429])
             errors = len([c for c in recent if not c['success']])
-            
+
             log_line = f"{now.strftime('%H:%M:%S')} | {calls_per_min}/min | {rate_limits} limits | {errors} errors | {len(self.api_call_log)} total\\n"
-            
+
             with open('api_rate_test.log', 'a', encoding='utf-8') as f:
                 f.write(log_line)
-            
+
             if errors > 0:
-                logger.warning(f"API issues: {errors} errors, {rate_limits} rate limits in last minute")
+                logger.warning(
+                    f"API issues: {errors} errors, {rate_limits} rate limits in last minute")
 
     def log_rate_statistics(self):
         """Calculate and log current API call rate"""
@@ -349,7 +352,8 @@ class PriceCollector:
             else:
                 # Log failed API call (could be rate limit or other error)
                 status_code = 429 if not price_data else 404
-                self.log_api_call(market_hash_name, status_code, False, response_time)
+                self.log_api_call(market_hash_name,
+                                  status_code, False, response_time)
 
                 logger.warning(f"✗ No price data for {market_hash_name}")
                 self.stats['failed_requests'] += 1
