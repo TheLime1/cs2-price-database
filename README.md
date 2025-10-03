@@ -36,31 +36,6 @@ The CS2 skins database contains:
 - `verify_prices.py` - Utility to verify collected prices
 - `data/skins_database.json` - Database of CS2 skins (expected to exist)
 
-## Code Quality Fixes Applied
-
-This codebase was cleaned up to address the following issues:
-
-### Import Errors
-- ✅ Fixed invalid imports from non-existent `utils.steam_api` and `scripts.analyze_database`
-- ✅ Added local `parse_date` function to handle date parsing
-- ✅ Removed unused import statements
-
-### Logging Issues
-- ✅ Replaced f-string interpolation in logging calls with lazy % formatting for better performance
-- ✅ Updated all `logger.info(f"text {var}")` to `logger.info("text %s", var)` format
-
-### Exception Handling
-- ✅ Replaced broad `except Exception:` with specific exception types:
-  - `aiohttp.ClientError` for HTTP client errors
-  - `ConnectionError` for network issues
-  - `ValueError` for data parsing errors
-  - `IOError` and `json.JSONDecodeError` for file operations
-
-### Code Quality
-- ✅ Removed unused variables (like unused `success` variable)
-- ✅ Fixed f-strings that had no interpolation variables
-- ✅ Cleaned up unused imports
-
 ## Setup
 
 1. Install dependencies:
