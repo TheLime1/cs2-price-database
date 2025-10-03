@@ -66,17 +66,19 @@ class SteamMarketAPIClient:
 
         return 0
 
-    async def _rate_limited_request(self, url: str, params: Dict[str, Any]) -> Optional[Dict]:
-        """Make a rate-limited request to the Steam Market API"""
+    async def _rate_limited_request(self, url: str, params: Dict[str, Any]) -> tuple[Optional[Dict], float]:
+        """Make a rate-limited request to the Steam Market API, returns (response, wait_time)"""
         if not self.session:
             raise RuntimeError(
                 "API client not initialized. Use async context manager.")
 
         # Check rate limit
         sleep_time = self._check_rate_limit()
+        wait_time = 0.0
         if sleep_time > 0:
             logger.info(
                 "Rate limit reached, sleeping for %.2f seconds", sleep_time)
+            wait_time = sleep_time
             await asyncio.sleep(sleep_time)
 
         try:
@@ -86,28 +88,30 @@ class SteamMarketAPIClient:
             async with self.session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return data
+                    return data, wait_time
                 elif response.status == 429:
                     logger.warning("Rate limited by Steam API, backing off")
-                    await asyncio.sleep(60)  # Back off for 1 minute
-                    return None
+                    backoff_time = 60.0
+                    wait_time += backoff_time
+                    await asyncio.sleep(backoff_time)  # Back off for 1 minute
+                    return None, wait_time
                 elif response.status == 500:
                     logger.warning(
                         "Steam API server error for params: %s", params)
-                    return None
+                    return None, wait_time
                 else:
                     logger.error(
                         "Steam API error: %s for params: %s", response.status, params)
-                    return None
+                    return None, wait_time
 
         except asyncio.TimeoutError:
             logger.error("Steam API request timed out")
-            return None
+            return None, wait_time
         except Exception as e:
             logger.error("Steam API request failed: %s", e)
-            return None
+            return None, wait_time
 
-    async def get_item_price(self, market_hash_name: str, currency: int = 3) -> Optional[Dict]:
+    async def get_item_price(self, market_hash_name: str, currency: int = 3) -> tuple[Optional[Dict], float]:
         """
         Get price data for a single item from Steam Market API
 
@@ -116,7 +120,7 @@ class SteamMarketAPIClient:
             currency: Currency code (3 = EUR, 1 = USD, etc.)
 
         Returns:
-            Price data dictionary or None if not found
+            Tuple of (Price data dictionary or None if not found, wait_time in seconds)
         """
         # Check cache first
         cache_key = f"{market_hash_name}_{currency}"
@@ -126,7 +130,7 @@ class SteamMarketAPIClient:
             cache_entry = self.cache[cache_key]
             if now - cache_entry["timestamp"] < self.cache_ttl:
                 logger.debug("Cache hit for %s", market_hash_name)
-                return cache_entry["data"]
+                return cache_entry["data"], 0.0
 
         # Make API request
         params = {
@@ -136,7 +140,7 @@ class SteamMarketAPIClient:
         }
 
         try:
-            data = await self._rate_limited_request(self.base_url, params)
+            data, wait_time = await self._rate_limited_request(self.base_url, params)
 
             if data and data.get("success"):
                 # Cache the result
@@ -146,14 +150,14 @@ class SteamMarketAPIClient:
                 }
                 logger.debug(
                     "Successfully fetched price for %s", market_hash_name)
-                return data
+                return data, wait_time
             else:
                 logger.warning("No valid price data for %s", market_hash_name)
-                return None
+                return None, wait_time
 
         except (aiohttp.ClientError, ConnectionError, ValueError) as e:
             logger.error("Failed to get price for %s: %s", market_hash_name, e)
-            return None
+            return None, 0.0
 
     async def get_multiple_prices(self, market_hash_names: List[str], currency: int = 3) -> Dict[str, Dict]:
         """
@@ -171,7 +175,7 @@ class SteamMarketAPIClient:
         # Process items one by one due to rate limiting
         for item_name in market_hash_names:
             try:
-                price_data = await self.get_item_price(item_name, currency)
+                price_data, wait_time = await self.get_item_price(item_name, currency)
                 if price_data:
                     results[item_name] = price_data
                 else:
@@ -240,5 +244,7 @@ async def get_steam_price(market_hash_name: str, currency: int = 3) -> Optional[
     Returns:
         Price data dictionary or None if not found
     """
+    steam_client = SteamMarketAPIClient()
     async with steam_client:
-        return await steam_client.get_item_price(market_hash_name, currency)
+        price_data, _ = await steam_client.get_item_price(market_hash_name, currency)
+        return price_data

@@ -43,16 +43,21 @@ def parse_date(date_str: str) -> datetime:
         return datetime.min
 
 
-# Set up logging
+# Set up logging with UTF-8 encoding
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('price_collection.log'),
-        logging.StreamHandler()
+        logging.FileHandler('price_collection.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
+
+
+def safe_log_name(name: str) -> str:
+    """Convert market hash name to logging-safe ASCII version"""
+    return name.replace("™", "(TM)").encode('ascii', 'replace').decode('ascii')
 
 
 class PriceCollector:
@@ -102,10 +107,11 @@ class PriceCollector:
             f.write(
                 "Format: Timestamp | Status | Success | Response Time | Item Name\n")
             f.write("=" * 80 + "\n\n")
-        logger.info("📊 API rate testing enabled - logging to api_rate_test.log")
+        logger.info(
+            "[API-TEST] API rate testing enabled - logging to api_rate_test.log")
 
-    def log_api_call(self, market_hash_name: str, status_code: int, success: bool, response_time: float = 0):
-        """Log API call details for rate limit testing"""
+    def log_api_call(self, market_hash_name: str, status_code: int, success: bool, response_time: float = 0, wait_time: float = 0):
+        """Log API call details for rate limit testing including wait times"""
         if not self.rate_test_enabled:
             return
 
@@ -117,11 +123,13 @@ class PriceCollector:
             'market_hash_name': market_hash_name,
             'status_code': status_code,
             'success': success,
-            'response_time': response_time
+            'response_time': response_time,
+            'wait_time': wait_time
         })
 
-        # Write to file immediately
-        log_entry = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} | Status: {status_code} | Success: {success} | Time: {response_time:.3f}s | Item: {market_hash_name}\n"
+        # Write to file immediately with wait time information
+        wait_info = f" | Wait: {wait_time:.3f}s" if wait_time > 0 else ""
+        log_entry = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} | Status: {status_code} | Success: {success} | Time: {response_time:.3f}s{wait_info} | Item: {safe_log_name(market_hash_name)}\n"
 
         with open('api_rate_test.log', 'a', encoding='utf-8') as f:
             f.write(log_entry)
@@ -184,7 +192,7 @@ class PriceCollector:
         # Also log to console if rate limit hit
         if rate_limit_hits > 0:
             logger.warning(
-                f"🚨 RATE LIMIT HIT! {rate_limit_hits} times in last minute. Calls/min: {calls_per_minute}")
+                f"[RATE-LIMIT] RATE LIMIT HIT! {rate_limit_hits} times in last minute. Calls/min: {calls_per_minute}")
 
     def setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown"""
@@ -307,16 +315,16 @@ class PriceCollector:
             # Record start time for response time tracking
             start_time = datetime.now()
 
-            # Get price from Steam Market API
-            # USD
-            price_data = await self.steam_client.get_item_price(market_hash_name, currency=1)
+            # Get price from Steam Market API (USD) - now returns (data, wait_time)
+            price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
 
             # Calculate response time
             response_time = (datetime.now() - start_time).total_seconds()
 
             if price_data and price_data.get('success'):
-                # Log successful API call
-                self.log_api_call(market_hash_name, 200, True, response_time)
+                # Log successful API call with wait time
+                self.log_api_call(market_hash_name, 200, True,
+                                  response_time, wait_time)
 
                 # Parse price strings (e.g., "$123.45" -> 123.45)
                 lowest_price = price_data.get('lowest_price', '$0.00')
@@ -340,7 +348,8 @@ class PriceCollector:
                 # Use lowest price as the main price, fallback to median
                 final_price = lowest if lowest > 0 else median
 
-                logger.debug(f"✓ {market_hash_name}: ${final_price}")
+                logger.debug(
+                    f"[OK] {safe_log_name(market_hash_name)}: ${final_price}")
 
                 self.stats['successful_requests'] += 1
 
@@ -353,9 +362,10 @@ class PriceCollector:
                 # Log failed API call (could be rate limit or other error)
                 status_code = 429 if not price_data else 404
                 self.log_api_call(market_hash_name,
-                                  status_code, False, response_time)
+                                  status_code, False, response_time, wait_time)
 
-                logger.warning(f"✗ No price data for {market_hash_name}")
+                logger.warning(
+                    f"[FAIL] No price data for {safe_log_name(market_hash_name)}")
                 self.stats['failed_requests'] += 1
                 return None
 
@@ -363,7 +373,8 @@ class PriceCollector:
             # Log exception as failed call
             self.log_api_call(market_hash_name, 500, False, 0)
 
-            logger.error(f"Error collecting price for {market_hash_name}: {e}")
+            logger.error(
+                f"Error collecting price for {safe_log_name(market_hash_name)}: {e}")
             self.stats['failed_requests'] += 1
             return None
 
