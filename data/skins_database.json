@@ -7,7 +7,7 @@
     "wear_availability": "assumed_all (needs verification)",
     "stattrak_availability": "assumed_all (needs verification)",
     "prices": "not_fetched (all set to 0)",
-    "last_price_update": "2025-10-04T19:30:10.901770"
+    "last_price_update": "2025-10-04T20:01:31.861529"
   },
   "skins": [
     {
@@ -160688,9 +160688,9 @@
                 "median_price": "$327.71"
               },
               "success": true,
-              "lowest_price": "$276.52",
-              "volume": "24",
-              "median_price": "$251.00"
+              "lowest_price": "$246.42",
+              "volume": "31",
+              "median_price": "$255.01"
             },
             "stattrak": {
               "usd": 773.51,
@@ -160728,9 +160728,9 @@
                 "median_price": "$129.00"
               },
               "success": true,
-              "lowest_price": "$129.00",
-              "volume": "60",
-              "median_price": "$125.50"
+              "lowest_price": "$127.45",
+              "volume": "59",
+              "median_price": "$123.22"
             },
             "stattrak": {
               "usd": 253.66,
@@ -160768,9 +160768,9 @@
                 "median_price": "$84.56"
               },
               "success": true,
-              "lowest_price": "$83.72",
-              "volume": "29",
-              "median_price": "$80.20"
+              "lowest_price": "$74.91",
+              "volume": "24",
+              "median_price": "$84.10"
             },
             "stattrak": {
               "usd": 176.02,
@@ -160808,9 +160808,9 @@
                 "median_price": "$65.90"
               },
               "success": true,
-              "lowest_price": "$70.27",
-              "volume": "17",
-              "median_price": "$68.19"
+              "lowest_price": "$69.83",
+              "volume": "16",
+              "median_price": "$68.36"
             },
             "stattrak": {
               "usd": 148.43,
@@ -160866,7 +160866,7 @@
                 "median_price": "$823.00"
               },
               "success": true,
-              "lowest_price": "$670.00",
+              "lowest_price": "$620.00",
               "volume": "1",
               "median_price": "$914.68"
             },
@@ -160900,9 +160900,9 @@
                 "median_price": "$185.70"
               },
               "success": true,
-              "lowest_price": "$194.00",
-              "volume": "37",
-              "median_price": "$147.98"
+              "lowest_price": "$182.94",
+              "volume": "32",
+              "median_price": "$186.58"
             },
             "stattrak": {
               "usd": 433.16,
@@ -160938,9 +160938,9 @@
                 "median_price": "$85.40"
               },
               "success": true,
-              "lowest_price": "$87.12",
-              "volume": "50",
-              "median_price": "$82.56"
+              "lowest_price": "$86.09",
+              "volume": "52",
+              "median_price": "$85.67"
             },
             "stattrak": {
               "usd": 211.95,
@@ -160978,9 +160978,9 @@
                 "median_price": "$51.54"
               },
               "success": true,
-              "lowest_price": "$57.41",
-              "volume": "30",
-              "median_price": "$50.02"
+              "lowest_price": "$55.00",
+              "volume": "28",
+              "median_price": "$55.12"
             },
             "stattrak": {
               "usd": 115.32,
@@ -161018,9 +161018,9 @@
                 "median_price": "$43.34"
               },
               "success": true,
-              "lowest_price": "$47.85",
-              "volume": "20",
-              "median_price": "$43.87"
+              "lowest_price": "$49.28",
+              "volume": "27",
+              "median_price": "$48.82"
             },
             "stattrak": {
               "usd": 109.19,
@@ -161074,7 +161074,7 @@
                 "median_price": "$79.30"
               },
               "success": true,
-              "lowest_price": "$86.44",
+              "lowest_price": "$85.10",
               "volume": "18",
               "median_price": "$80.50"
             },
@@ -161114,9 +161114,9 @@
                 "median_price": "$24.75"
               },
               "success": true,
-              "lowest_price": "$24.75",
-              "volume": "135",
-              "median_price": "$24.87"
+              "lowest_price": "$24.67",
+              "volume": "115",
+              "median_price": "$24.84"
             },
             "stattrak": {
               "usd": 48.44,
@@ -161194,7 +161194,7 @@
                 "median_price": "$8.31"
               },
               "success": true,
-              "lowest_price": "$9.13",
+              "lowest_price": "$8.55",
               "volume": "89",
               "median_price": "$9.23"
             },
@@ -161314,7 +161314,7 @@
               "usd": 0,
               "last_updated": null,
               "success": true,
-              "lowest_price": "$23.12",
+              "lowest_price": "$23.34",
               "volume": "153",
               "median_price": "$22.72"
             },
@@ -161394,7 +161394,7 @@
               "usd": 0,
               "last_updated": null,
               "success": true,
-              "lowest_price": "$8.00",
+              "lowest_price": "$7.06",
               "volume": "113",
               "median_price": "$7.04"
             },
@@ -161468,7 +161468,7 @@
               "usd": 0,
               "last_updated": null,
               "success": true,
-              "lowest_price": "$38.50",
+              "lowest_price": "$35.65",
               "volume": "96",
               "median_price": "$37.56"
             },
@@ -161496,7 +161496,7 @@
               "usd": 0,
               "last_updated": null,
               "success": true,
-              "lowest_price": "$20.20",
+              "lowest_price": "$19.60",
               "volume": "171",
               "median_price": "$19.46"
             },

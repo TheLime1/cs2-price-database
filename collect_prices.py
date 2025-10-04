@@ -360,9 +360,9 @@ class PriceCollector:
             # Check if missing_only mode and variant already has price
             if self.missing_only:
                 normal_has_price = variant.get('prices', {}).get(
-                    'normal', {}).get('lowest_price_usd', 0) > 0
+                    'normal', {}).get('usd', 0) > 0
                 stattrak_has_price = variant.get('prices', {}).get(
-                    'stattrak', {}).get('lowest_price_usd', 0) > 0
+                    'stattrak', {}).get('usd', 0) > 0
 
                 # Skip if already has required prices
                 if self.ignore_stattrak and normal_has_price:
@@ -374,14 +374,14 @@ class PriceCollector:
             variants_to_process = []
 
             # Normal variant (if needed)
-            if not self.missing_only or variant.get('prices', {}).get('normal', {}).get('lowest_price_usd', 0) <= 0:
+            if not self.missing_only or variant.get('prices', {}).get('normal', {}).get('usd', 0) <= 0:
                 normal_hash = self.create_market_hash_name(
                     skin, variant, stattrak=False)
                 variants_to_process.append((normal_hash, False))
 
             # StatTrak variant (if not ignoring and needed)
             if not self.ignore_stattrak:
-                if not self.missing_only or variant.get('prices', {}).get('stattrak', {}).get('lowest_price_usd', 0) <= 0:
+                if not self.missing_only or variant.get('prices', {}).get('stattrak', {}).get('usd', 0) <= 0:
                     stattrak_hash = self.create_market_hash_name(
                         skin, variant, stattrak=True)
                     variants_to_process.append((stattrak_hash, True))
@@ -530,9 +530,9 @@ class PriceCollector:
             # Check if we should skip this variant (missing_only mode)
             if self.missing_only:
                 normal_has_price = variant.get('prices', {}).get(
-                    'normal', {}).get('lowest_price_usd', 0) > 0
+                    'normal', {}).get('usd', 0) > 0
                 stattrak_has_price = variant.get('prices', {}).get(
-                    'stattrak', {}).get('lowest_price_usd', 0) > 0
+                    'stattrak', {}).get('usd', 0) > 0
 
                 # Skip if both normal and stattrak already have prices (or if ignoring stattrak and normal has price)
                 if self.ignore_stattrak and normal_has_price:
@@ -544,7 +544,7 @@ class PriceCollector:
             normal_needs_price = True
             if self.missing_only:
                 normal_needs_price = variant.get('prices', {}).get(
-                    'normal', {}).get('lowest_price_usd', 0) <= 0
+                    'normal', {}).get('usd', 0) <= 0
 
             if normal_needs_price:
                 normal_price = await self.collect_price_for_variant(skin, variant, stattrak=False)
@@ -564,7 +564,7 @@ class PriceCollector:
                 stattrak_needs_price = True
                 if self.missing_only:
                     stattrak_needs_price = variant.get('prices', {}).get(
-                        'stattrak', {}).get('lowest_price_usd', 0) <= 0
+                        'stattrak', {}).get('usd', 0) <= 0
 
                 if stattrak_needs_price:
                     stattrak_price = await self.collect_price_for_variant(skin, variant, stattrak=True)
