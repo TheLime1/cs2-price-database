@@ -32,6 +32,15 @@ class ProxyInfo:
     response_time: float = 0.0
     failure_count: int = 0
     success_count: int = 0
+    # Rate limiting tracking
+    request_timestamps: Optional[List[float]] = None
+    consecutive_rate_limits: int = 0
+    last_rate_limit: Optional[datetime] = None
+    rate_limit_backoff_until: Optional[datetime] = None
+
+    def __post_init__(self):
+        if self.request_timestamps is None:
+            self.request_timestamps = []
 
     @property
     def url(self) -> str:
@@ -61,11 +70,17 @@ class ProxyManager:
         self.use_proxies = False
         self._proxy_fetch_task = None
 
-        # Concurrency control for async proxy usage
-        # Recommended: 10 concurrent requests for optimal performance
+        # Enhanced concurrency control - 100 concurrent requests
         self.max_concurrent_requests = int(
-            os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
+            os.getenv("MAX_CONCURRENT_REQUESTS", "100"))
         self._request_semaphore = None
+
+        # Rate limiting configuration
+        self.max_requests_per_minute = 19  # Steam API limit
+        self.rate_limit_window = 60.0  # 1 minute in seconds
+        self.rate_limit_backoff_time = 61.0  # 61 seconds backoff
+        # Remove proxy after 5 consecutive rate limits
+        self.max_consecutive_rate_limits = 5
 
         # Load proxy configuration
         self._load_proxy_config()
@@ -352,16 +367,109 @@ class ProxyManager:
             proxy.is_healthy = False
             logger.warning(
                 f"Proxy {proxy.host}:{proxy.port} marked as unhealthy after {proxy.failure_count} failures")
-            self.rotate_proxy()
+            # Remove from active proxy pool
+            self._remove_proxy_from_pool(proxy)
 
     def mark_proxy_success(self, proxy: ProxyInfo, response_time: float = 0.0):
         """Mark a proxy as successful"""
         proxy.success_count += 1
         proxy.response_time = response_time
+        proxy.failure_count = 0  # Reset failure count on success
+        proxy.consecutive_rate_limits = 0  # Reset consecutive rate limits on success
         proxy.last_check = datetime.now()
-        # Reset failure count on success
-        if proxy.failure_count > 0:
-            proxy.failure_count = max(0, proxy.failure_count - 1)
+
+    def can_make_request(self, proxy: ProxyInfo) -> bool:
+        """Check if proxy can make a request without exceeding rate limits"""
+        if not proxy or not proxy.is_healthy:
+            return False
+
+        now = datetime.now()
+
+        # Check if proxy is in backoff period
+        if proxy.rate_limit_backoff_until and now < proxy.rate_limit_backoff_until:
+            return False
+
+        # Ensure request_timestamps is initialized
+        if proxy.request_timestamps is None:
+            proxy.request_timestamps = []
+
+        # Clean old timestamps (older than 1 minute)
+        current_time = time.time()
+        proxy.request_timestamps = [
+            ts for ts in proxy.request_timestamps
+            if current_time - ts < self.rate_limit_window
+        ]
+
+        # Check if we're at the rate limit (19 requests per minute)
+        return len(proxy.request_timestamps) < self.max_requests_per_minute
+
+    def record_request(self, proxy: ProxyInfo):
+        """Record a request timestamp for rate limiting"""
+        if proxy:
+            if proxy.request_timestamps is None:
+                proxy.request_timestamps = []
+            proxy.request_timestamps.append(time.time())
+
+    def handle_rate_limit(self, proxy: ProxyInfo):
+        """Handle rate limit response from Steam API"""
+        if not proxy:
+            return
+
+        proxy.consecutive_rate_limits += 1
+        proxy.last_rate_limit = datetime.now()
+
+        # Set 61-second backoff period
+        proxy.rate_limit_backoff_until = datetime.now(
+        ) + timedelta(seconds=self.rate_limit_backoff_time)
+
+        logger.warning(
+            f"Proxy {proxy.host}:{proxy.port} hit rate limit #{proxy.consecutive_rate_limits}. Backing off for {self.rate_limit_backoff_time} seconds")
+
+        # Remove proxy if it hits rate limit 5 consecutive times
+        if proxy.consecutive_rate_limits >= self.max_consecutive_rate_limits:
+            logger.warning(
+                f"Proxy {proxy.host}:{proxy.port} removed after {proxy.consecutive_rate_limits} consecutive rate limits")
+            self._remove_proxy_from_pool(proxy)
+
+    def _remove_proxy_from_pool(self, proxy: ProxyInfo):
+        """Remove a proxy from the active pool"""
+        try:
+            self.proxies.remove(proxy)
+            logger.info(
+                f"Removed proxy {proxy.host}:{proxy.port} from active pool")
+
+            # Adjust current index if necessary
+            if self.current_proxy_index >= len(self.proxies) and self.proxies:
+                self.current_proxy_index = 0
+        except ValueError:
+            # Proxy already removed
+            pass
+
+    def get_next_available_proxy(self) -> Optional[ProxyInfo]:
+        """Get the next available proxy that can make a request"""
+        if not self.use_proxies or not self.proxies:
+            return None
+
+        healthy_proxies = [p for p in self.proxies if p.is_healthy]
+        if not healthy_proxies:
+            logger.warning("No healthy proxies available")
+            return None
+
+        # Try to find a proxy that can make a request (not rate limited)
+        for _ in range(len(healthy_proxies)):
+            proxy = healthy_proxies[self.current_proxy_index %
+                                    len(healthy_proxies)]
+
+            if self.can_make_request(proxy):
+                return proxy
+
+            # Move to next proxy
+            self.current_proxy_index = (
+                self.current_proxy_index + 1) % len(healthy_proxies)
+
+        # If no proxy is immediately available, return the current one anyway
+        # (it will handle the rate limiting internally)
+        return healthy_proxies[self.current_proxy_index % len(healthy_proxies)] if healthy_proxies else None
 
     async def test_proxy(self, proxy: ProxyInfo) -> bool:
         """Test if a proxy is working"""

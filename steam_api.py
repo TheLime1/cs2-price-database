@@ -87,12 +87,12 @@ class SteamMarketAPIClient:
         return 0
 
     async def _rate_limited_request(self, url: str, params: Dict[str, Any]) -> tuple[Optional[Dict], float]:
-        """Make a rate-limited request to the Steam Market API with proxy support and concurrency control, returns (response, wait_time)"""
+        """Make a rate-limited request to the Steam Market API with enhanced proxy support and 19 req/min limiting"""
         if not self.session:
             raise RuntimeError(
                 "API client not initialized. Use async context manager.")
 
-        # Use semaphore to control concurrent requests when using proxies
+        # Use semaphore to control concurrent requests when using proxies (now 100 concurrent)
         semaphore = None
         if proxy_manager.use_proxies:
             semaphore = proxy_manager.get_request_semaphore()
@@ -102,25 +102,28 @@ class SteamMarketAPIClient:
             await semaphore.acquire()
 
         try:
-            # Check rate limit
-            sleep_time = self._check_rate_limit()
-            wait_time = 0.0
-            if sleep_time > 0:
-                logger.info(
-                    "Rate limit reached, sleeping for %.2f seconds", sleep_time)
-                wait_time = sleep_time
-                await asyncio.sleep(sleep_time)
-
-            # Get current proxy
-            current_proxy = proxy_manager.get_current_proxy()
+            # Get next available proxy (handles rate limiting internally)
+            current_proxy = proxy_manager.get_next_available_proxy()
             proxy_url = current_proxy.url if current_proxy else None
             proxy_auth = current_proxy.auth if current_proxy else None
 
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    # Record the request timestamp
-                    self.request_timestamps.append(time.time())
+                    # Check if we can make a request with this proxy
+                    if current_proxy and not proxy_manager.can_make_request(current_proxy):
+                        # Proxy is rate limited, try to get another one
+                        current_proxy = proxy_manager.get_next_available_proxy()
+                        if not current_proxy:
+                            # No proxies available, wait briefly and retry
+                            await asyncio.sleep(1.0)
+                            continue
+                        proxy_url = current_proxy.url
+                        proxy_auth = current_proxy.auth
+
+                    # Record the request for rate limiting
+                    if current_proxy:
+                        proxy_manager.record_request(current_proxy)
 
                     # Log proxy usage
                     if current_proxy:
@@ -142,30 +145,27 @@ class SteamMarketAPIClient:
                             if current_proxy:
                                 proxy_manager.mark_proxy_success(
                                     current_proxy, request_time)
-                            return data, wait_time
+                            return data, 0.0
                         elif response.status == 429:
                             logger.warning(
-                                "Rate limited by Steam API, rotating proxy")
-                            # Mark current proxy as failed and rotate
+                                "Rate limited by Steam API - handling with 61s backoff")
+                            # Handle rate limit with 61-second backoff and proxy rotation
                             if current_proxy:
-                                proxy_manager.mark_proxy_failed(current_proxy)
+                                proxy_manager.handle_rate_limit(current_proxy)
+                                # Get a fresh proxy for next attempt
                                 if attempt < max_retries - 1:
-                                    proxy_manager.rotate_proxy()
-                                    current_proxy = proxy_manager.get_current_proxy()
+                                    current_proxy = proxy_manager.get_next_available_proxy()
                                     proxy_url = current_proxy.url if current_proxy else None
                                     proxy_auth = current_proxy.auth if current_proxy else None
                                     logger.info(
-                                        f"Rotated to proxy: {current_proxy.host}:{current_proxy.port}" if current_proxy else "No proxy available")
+                                        f"Rotated to fresh proxy: {current_proxy.host}:{current_proxy.port}" if current_proxy else "No proxy available")
                                     continue
-                            # If no proxy or last attempt, back off briefly
-                            backoff_time = 5.0  # Reduced from 60s
-                            wait_time += backoff_time
-                            await asyncio.sleep(backoff_time)
-                            return None, wait_time
+                            # If no proxy available, return error
+                            return None, 61.0  # 61-second wait indicated
                         elif response.status == 500:
                             logger.warning(
                                 "Steam API server error for params: %s", params)
-                            return None, wait_time
+                            return None, 0.0
                         else:
                             logger.error(
                                 "Steam API error: %s for params: %s", response.status, params)
@@ -173,47 +173,43 @@ class SteamMarketAPIClient:
                             if current_proxy and response.status in [403, 407, 502, 503]:
                                 proxy_manager.mark_proxy_failed(current_proxy)
                                 if attempt < max_retries - 1:
-                                    proxy_manager.rotate_proxy()
-                                    current_proxy = proxy_manager.get_current_proxy()
+                                    current_proxy = proxy_manager.get_next_available_proxy()
                                     proxy_url = current_proxy.url if current_proxy else None
                                     proxy_auth = current_proxy.auth if current_proxy else None
                                     continue
-                            return None, wait_time
+                            return None, 0.0
 
                 except asyncio.TimeoutError:
                     logger.error("Steam API request timed out")
                     if current_proxy:
                         proxy_manager.mark_proxy_failed(current_proxy)
                         if attempt < max_retries - 1:
-                            proxy_manager.rotate_proxy()
-                            current_proxy = proxy_manager.get_current_proxy()
+                            current_proxy = proxy_manager.get_next_available_proxy()
                             proxy_url = current_proxy.url if current_proxy else None
                             proxy_auth = current_proxy.auth if current_proxy else None
                             continue
-                    return None, wait_time
+                    return None, 0.0
                 except (aiohttp.ClientProxyConnectionError, aiohttp.ClientHttpProxyError) as e:
                     logger.error(f"Proxy connection error: {e}")
                     if current_proxy:
                         proxy_manager.mark_proxy_failed(current_proxy)
                         if attempt < max_retries - 1:
-                            proxy_manager.rotate_proxy()
-                            current_proxy = proxy_manager.get_current_proxy()
+                            current_proxy = proxy_manager.get_next_available_proxy()
                             proxy_url = current_proxy.url if current_proxy else None
                             proxy_auth = current_proxy.auth if current_proxy else None
                             continue
-                    return None, wait_time
+                    return None, 0.0
                 except Exception as e:
                     logger.error("Steam API request failed: %s", e)
                     if current_proxy and attempt < max_retries - 1:
                         proxy_manager.mark_proxy_failed(current_proxy)
-                        proxy_manager.rotate_proxy()
-                        current_proxy = proxy_manager.get_current_proxy()
+                        current_proxy = proxy_manager.get_next_available_proxy()
                         proxy_url = current_proxy.url if current_proxy else None
                         proxy_auth = current_proxy.auth if current_proxy else None
                         continue
-                    return None, wait_time
+                    return None, 0.0
 
-            return None, wait_time
+            return None, 0.0
 
         finally:
             # Release semaphore if we acquired it
