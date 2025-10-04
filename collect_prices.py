@@ -556,9 +556,6 @@ class PriceCollector:
 
             self.stats['processed_variants'] += 1
 
-            # Shorter delay between requests for better rate utilization
-            await asyncio.sleep(0.2)
-
             # Process StatTrak version only if not ignoring
             if not self.ignore_stattrak:
                 stattrak_needs_price = True
@@ -575,7 +572,6 @@ class PriceCollector:
                         self.save_database()
 
                 self.stats['processed_variants'] += 1
-                await asyncio.sleep(0.2)
 
         logger.info(
             f"Completed {skin_name}: {success_count}/{expected_total} prices collected")
@@ -668,8 +664,8 @@ class PriceCollector:
                     if (i + 1) % 5 == 0:
                         self.print_progress()
 
-                    # Shorter delay between skins for better rate utilization
-                    await asyncio.sleep(1.0)
+                    # Brief delay for checkpoint saving only
+                    await asyncio.sleep(0.1)
 
                 except KeyboardInterrupt:
                     logger.info(
