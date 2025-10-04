@@ -5,6 +5,7 @@ Respects Steam API rate limits (18 calls/minute) and provides progress tracking
 """
 
 from steam_api import SteamMarketAPIClient
+from proxy_manager import proxy_manager
 import json
 import asyncio
 import logging
@@ -24,6 +25,7 @@ def parse_date(date_str: str) -> datetime:
     try:
         # Try different date formats
         formats = [
+            "%d %B %Y",      # "14 August 2013", "17 September 2025"
             "%Y-%m-%d",
             "%d-%m-%Y",
             "%m/%d/%Y",
@@ -63,10 +65,11 @@ def safe_log_name(name: str) -> str:
 class PriceCollector:
     """Collects Steam Market prices for CS2 skins with rate limiting and progress tracking"""
 
-    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False):
+    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False):
         self.database_path = database_path
         self.checkpoint_path = checkpoint_path
         self.ignore_stattrak = ignore_stattrak
+        self.missing_only = missing_only
         self.steam_client = SteamMarketAPIClient()
         self.shutdown_requested = False
 
@@ -293,6 +296,142 @@ class PriceCollector:
 
         return market_name
 
+    async def process_variants_concurrently(self, skin: Dict, variants: List[Dict], skin_index: int, total_skins: int) -> None:
+        """Process all variants of a skin concurrently with multiple proxies"""
+        skin_name = f"{skin['weapon']} {skin['skin_name']}"
+        logger.info(
+            f"\n[{skin_index}/{total_skins}] Processing: {skin_name} ({len(variants)})")
+        logger.info(f"Processing: {skin_name}")
+
+        # Prepare tasks for concurrent execution
+        tasks = []
+        for variant in variants:
+            task = self.process_single_variant(skin, variant, skin_name)
+            tasks.append(task)
+
+        # Execute all variants concurrently with proxy rotation
+        completed_count = 0
+        failed_count = 0
+
+        # Get concurrent limit from proxy manager
+        max_concurrent = 10  # Default
+        if hasattr(proxy_manager, 'max_concurrent_requests'):
+            max_concurrent = proxy_manager.max_concurrent_requests
+
+        # Process in batches to control concurrency
+        for i in range(0, len(tasks), max_concurrent):
+            batch = tasks[i:i + max_concurrent]
+            logger.info(
+                f"  📦 Processing batch {i//max_concurrent + 1} with {len(batch)} variants using {len(batch)} proxies")
+
+            try:
+                # Execute batch concurrently
+                results = await asyncio.gather(*batch, return_exceptions=True)
+
+                # Process results
+                for j, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        logger.error(f"  ❌ Variant {i+j+1} failed: {result}")
+                        failed_count += 1
+                    elif result:
+                        logger.info(
+                            f"  ✅ Variant {i+j+1} completed successfully")
+                        completed_count += 1
+                    else:
+                        logger.warning(
+                            f"  ⚠️ Variant {i+j+1} completed with no result")
+                        failed_count += 1
+
+            except Exception as e:
+                logger.error(f"  ❌ Batch failed: {e}")
+                failed_count += len(batch)
+
+        # Update stats
+        self.stats['processed_variants'] += len(variants)
+        self.stats['successful_requests'] += completed_count
+        self.stats['failed_requests'] += failed_count
+
+        logger.info(
+            f"Completed {skin_name}: {completed_count}/{len(variants)} prices collected")
+
+    async def process_single_variant(self, skin: Dict, variant: Dict, skin_name: str) -> bool:
+        """Process a single variant with detailed logging"""
+        try:
+            # Check if missing_only mode and variant already has price
+            if self.missing_only:
+                normal_has_price = variant.get('prices', {}).get(
+                    'normal', {}).get('lowest_price_usd', 0) > 0
+                stattrak_has_price = variant.get('prices', {}).get(
+                    'stattrak', {}).get('lowest_price_usd', 0) > 0
+
+                # Skip if already has required prices
+                if self.ignore_stattrak and normal_has_price:
+                    return True
+                elif not self.ignore_stattrak and normal_has_price and stattrak_has_price:
+                    return True
+
+            # Create market hash names for both normal and StatTrak
+            variants_to_process = []
+
+            # Normal variant (if needed)
+            if not self.missing_only or variant.get('prices', {}).get('normal', {}).get('lowest_price_usd', 0) <= 0:
+                normal_hash = self.create_market_hash_name(
+                    skin, variant, stattrak=False)
+                variants_to_process.append((normal_hash, False))
+
+            # StatTrak variant (if not ignoring and needed)
+            if not self.ignore_stattrak:
+                if not self.missing_only or variant.get('prices', {}).get('stattrak', {}).get('lowest_price_usd', 0) <= 0:
+                    stattrak_hash = self.create_market_hash_name(
+                        skin, variant, stattrak=True)
+                    variants_to_process.append((stattrak_hash, True))
+
+            success_count = 0
+            for market_hash_name, is_stattrak in variants_to_process:
+                try:
+                    # Get price with proxy rotation (USD currency)
+                    price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
+
+                    if price_data:
+                        # Ensure prices structure exists
+                        if 'prices' not in variant:
+                            variant['prices'] = {}
+
+                        key = 'stattrak' if is_stattrak else 'normal'
+                        if key not in variant['prices']:
+                            variant['prices'][key] = {}
+
+                        # Store price data
+                        variant['prices'][key].update(price_data)
+                        success_count += 1
+
+                        # Log with proxy info
+                        current_proxy = proxy_manager.get_current_proxy()
+
+                        proxy_info = f" via {current_proxy.host}:{current_proxy.port}" if current_proxy else ""
+                        price_str = price_data.get('lowest_price', 'N/A')
+                        # Ensure USD display (Steam API should return USD with currency=1)
+                        logger.info(
+                            f"    💰 {key.capitalize()}: {price_str} USD{proxy_info}")
+
+                        # Save immediately after successful price collection
+                        self.save_database()
+
+                    # Log API call for rate testing
+                    self.log_api_call(
+                        market_hash_name, 200 if price_data else 404, bool(price_data), wait_time)
+
+                except Exception as e:
+                    logger.error(
+                        f"    ❌ Failed to get {('StatTrak' if is_stattrak else 'Normal')} price: {e}")
+                    self.log_api_call(market_hash_name, 500, False, 0)
+
+            return success_count > 0
+
+        except Exception as e:
+            logger.error(f"    ❌ Error processing variant: {e}")
+            return False
+
     def calculate_total_work(self, skins_with_dates: List[Tuple[Dict, datetime]]) -> Tuple[int, int]:
         """Calculate total skins and variants to process"""
         total_skins = len(skins_with_dates)
@@ -388,13 +527,32 @@ class PriceCollector:
         expected_total = len(variants) * (1 if self.ignore_stattrak else 2)
 
         for variant in variants:
+            # Check if we should skip this variant (missing_only mode)
+            if self.missing_only:
+                normal_has_price = variant.get('prices', {}).get(
+                    'normal', {}).get('lowest_price_usd', 0) > 0
+                stattrak_has_price = variant.get('prices', {}).get(
+                    'stattrak', {}).get('lowest_price_usd', 0) > 0
+
+                # Skip if both normal and stattrak already have prices (or if ignoring stattrak and normal has price)
+                if self.ignore_stattrak and normal_has_price:
+                    continue
+                elif not self.ignore_stattrak and normal_has_price and stattrak_has_price:
+                    continue
+
             # Process normal version
-            normal_price = await self.collect_price_for_variant(skin, variant, stattrak=False)
-            if normal_price:
-                variant['prices']['normal'].update(normal_price)
-                success_count += 1
-                # Save immediately after successful price collection to prevent data loss
-                self.save_database()
+            normal_needs_price = True
+            if self.missing_only:
+                normal_needs_price = variant.get('prices', {}).get(
+                    'normal', {}).get('lowest_price_usd', 0) <= 0
+
+            if normal_needs_price:
+                normal_price = await self.collect_price_for_variant(skin, variant, stattrak=False)
+                if normal_price:
+                    variant['prices']['normal'].update(normal_price)
+                    success_count += 1
+                    # Save immediately after successful price collection to prevent data loss
+                    self.save_database()
 
             self.stats['processed_variants'] += 1
 
@@ -403,12 +561,18 @@ class PriceCollector:
 
             # Process StatTrak version only if not ignoring
             if not self.ignore_stattrak:
-                stattrak_price = await self.collect_price_for_variant(skin, variant, stattrak=True)
-                if stattrak_price:
-                    variant['prices']['stattrak'].update(stattrak_price)
-                    success_count += 1
-                    # Save immediately after successful price collection to prevent data loss
-                    self.save_database()
+                stattrak_needs_price = True
+                if self.missing_only:
+                    stattrak_needs_price = variant.get('prices', {}).get(
+                        'stattrak', {}).get('lowest_price_usd', 0) <= 0
+
+                if stattrak_needs_price:
+                    stattrak_price = await self.collect_price_for_variant(skin, variant, stattrak=True)
+                    if stattrak_price:
+                        variant['prices']['stattrak'].update(stattrak_price)
+                        success_count += 1
+                        # Save immediately after successful price collection to prevent data loss
+                        self.save_database()
 
                 self.stats['processed_variants'] += 1
                 await asyncio.sleep(0.2)
@@ -489,10 +653,9 @@ class PriceCollector:
                     break
 
                 try:
-                    logger.info(
-                        "\\n[%d/%d] Processing: %s (%d)", i+1, len(skins_with_dates), skin['full_name'], intro_date.year)
-
-                    await self.process_skin(skin)
+                    # Use concurrent processing with multiple proxies
+                    variants = skin.get('variants', [])
+                    await self.process_variants_concurrently(skin, variants, i+1, len(skins_with_dates))
 
                     self.stats['processed_skins'] += 1
                     self.checkpoint['processed_skins'] = self.stats['processed_skins']
@@ -545,10 +708,13 @@ async def main():
                         help='Start from beginning instead of resuming')
     parser.add_argument('--ignore-stattrak', action='store_true',
                         help='Skip StatTrak variants to speed up collection')
+    parser.add_argument('--missing-only', action='store_true',
+                        help='Only process skins/variants that don\'t have prices yet')
 
     args = parser.parse_args()
 
-    collector = PriceCollector(ignore_stattrak=args.ignore_stattrak)
+    collector = PriceCollector(
+        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only)
     await collector.collect_all_prices(
         limit=args.limit,
         resume=not args.no_resume

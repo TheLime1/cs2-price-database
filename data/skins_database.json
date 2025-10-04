@@ -7,7 +7,7 @@
     "wear_availability": "assumed_all (needs verification)",
     "stattrak_availability": "assumed_all (needs verification)",
     "prices": "not_fetched (all set to 0)",
-    "last_price_update": "2025-10-03T23:03:12.854686"
+    "last_price_update": "2025-10-04T14:56:46.896378"
   },
   "skins": [
     {
@@ -33,15 +33,21 @@
           "prices": {
             "normal": {
               "usd": 824.14,
-              "last_updated": "2025-10-03T22:36:34.103451",
+              "last_updated": "2025-10-04T14:09:04.547652",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$824.14"
-              }
+              },
+              "success": true,
+              "lowest_price": "$824.14"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 1515.59,
+              "last_updated": "2025-10-04T14:09:05.275373",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$1,515.59"
+              }
             }
           }
         },
@@ -56,16 +62,21 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 962.23,
-              "last_updated": "2025-10-03T22:36:34.792645",
+              "usd": 771.57,
+              "last_updated": "2025-10-04T14:09:06.523536",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$962.23"
-              }
+                "lowest_price": "$771.57"
+              },
+              "success": true,
+              "lowest_price": "657,52€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:07.240863",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         },
@@ -81,14 +92,18 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:35.466681",
+              "last_updated": "2025-10-04T14:09:07.949987",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:08.630186",
               "raw_data": {
                 "success": true
               }
-            },
-            "stattrak": {
-              "usd": 0,
-              "last_updated": null
             }
           }
         },
@@ -104,14 +119,18 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:36.135037",
+              "last_updated": "2025-10-04T14:09:09.346598",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:10.061389",
               "raw_data": {
                 "success": true
               }
-            },
-            "stattrak": {
-              "usd": 0,
-              "last_updated": null
             }
           }
         },
@@ -127,14 +146,18 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:36.782991",
+              "last_updated": "2025-10-04T14:09:10.757883",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:11.497777",
               "raw_data": {
                 "success": true
               }
-            },
-            "stattrak": {
-              "usd": 0,
-              "last_updated": null
             }
           }
         }
@@ -167,16 +190,22 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 597.7,
-              "last_updated": "2025-10-03T22:36:38.438860",
+              "usd": 568.0,
+              "last_updated": "2025-10-04T14:09:13.257106",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$597.70"
-              }
+                "lowest_price": "$568.00"
+              },
+              "success": true,
+              "lowest_price": "484,05€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 1289.49,
+              "last_updated": "2025-10-04T14:09:13.966438",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$1,289.49"
+              }
             }
           }
         },
@@ -191,18 +220,26 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 345.0,
-              "last_updated": "2025-10-03T22:33:29.005529",
+              "usd": 352.03,
+              "last_updated": "2025-10-04T14:09:14.656802",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$345.00",
-                "volume": "7",
-                "median_price": "$353.67"
-              }
+                "lowest_price": "$352.03",
+                "volume": "4",
+                "median_price": "$345.00"
+              },
+              "success": true,
+              "lowest_price": "299,99€",
+              "volume": "4",
+              "median_price": "294,01€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 899.0,
+              "last_updated": "2025-10-04T14:09:15.592076",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$899.00"
+              }
             }
           }
         },
@@ -217,18 +254,26 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 293.36,
-              "last_updated": "2025-10-03T22:33:29.702571",
+              "usd": 292.22,
+              "last_updated": "2025-10-04T14:09:16.363497",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$293.36",
-                "volume": "4",
-                "median_price": "$279.01"
-              }
+                "lowest_price": "$292.22",
+                "volume": "7",
+                "median_price": "$281.05"
+              },
+              "success": true,
+              "lowest_price": "249,02€",
+              "volume": "6",
+              "median_price": "239,51€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 695.77,
+              "last_updated": "2025-10-04T14:09:17.085558",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$695.77"
+              }
             }
           }
         },
@@ -244,15 +289,25 @@
           "prices": {
             "normal": {
               "usd": 254.91,
-              "last_updated": "2025-10-03T22:33:30.621004",
+              "last_updated": "2025-10-04T14:09:17.864142",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$254.91"
-              }
+                "lowest_price": "$254.91",
+                "volume": "3",
+                "median_price": "$220.55"
+              },
+              "success": true,
+              "lowest_price": "217,23€",
+              "volume": "3",
+              "median_price": "187,96€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 728.38,
+              "last_updated": "2025-10-04T14:09:18.663245",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$728.38"
+              }
             }
           }
         },
@@ -267,16 +322,26 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 227.15,
-              "last_updated": "2025-10-03T22:33:31.602599",
+              "usd": 224.59,
+              "last_updated": "2025-10-04T14:09:19.356461",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$227.15"
-              }
+                "lowest_price": "$224.59",
+                "volume": "2",
+                "median_price": "$224.13"
+              },
+              "success": true,
+              "lowest_price": "191,39€",
+              "volume": "2",
+              "median_price": "191,01€"
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 690.0,
+              "last_updated": "2025-10-04T14:09:20.148001",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$690.00"
+              }
             }
           }
         }
@@ -310,14 +375,17 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:38.716010",
+              "last_updated": "2025-10-04T14:09:24.212606",
               "raw_data": {
                 "success": true
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:24.960261",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         },
@@ -333,14 +401,17 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:39.414873",
+              "last_updated": "2025-10-04T14:09:25.676503",
               "raw_data": {
                 "success": true
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:26.371480",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         },
@@ -356,14 +427,17 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:40.103647",
+              "last_updated": "2025-10-04T14:09:27.076045",
               "raw_data": {
                 "success": true
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:27.771952",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         },
@@ -379,14 +453,17 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:40.747417",
+              "last_updated": "2025-10-04T14:09:28.544064",
               "raw_data": {
                 "success": true
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:29.384748",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         },
@@ -402,14 +479,17 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:41.395092",
+              "last_updated": "2025-10-04T14:09:30.113773",
               "raw_data": {
                 "success": true
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:30.825856",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         }
@@ -442,18 +522,22 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 176.02,
-              "last_updated": "2025-10-03T22:36:43.048670",
+              "usd": 180.0,
+              "last_updated": "2025-10-04T14:35:29.300583",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$176.02",
-                "volume": "5",
-                "median_price": "$172.51"
+                "lowest_price": "$180.00",
+                "volume": "12",
+                "median_price": "$180.00"
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 528.05,
+              "last_updated": "2025-10-04T13:51:39.060356",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$528.05"
+              }
             }
           }
         },
@@ -468,18 +552,22 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 199.99,
-              "last_updated": "2025-10-03T22:36:43.692363",
+              "usd": 175.0,
+              "last_updated": "2025-10-04T14:35:30.205432",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$199.99",
+                "lowest_price": "$175.00",
                 "volume": "1",
-                "median_price": "$189.68"
+                "median_price": "$121.76"
               }
             },
             "stattrak": {
-              "usd": 0,
-              "last_updated": null
+              "usd": 459.0,
+              "last_updated": "2025-10-04T13:51:41.348088",
+              "raw_data": {
+                "success": true,
+                "lowest_price": "$459.00"
+              }
             }
           }
         },
@@ -495,7 +583,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:44.372226",
+              "last_updated": "2025-10-04T14:35:31.213042",
               "raw_data": {
                 "success": true
               }
@@ -518,7 +606,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:45.119665",
+              "last_updated": "2025-10-04T14:35:31.933170",
               "raw_data": {
                 "success": true
               }
@@ -541,7 +629,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:45.763946",
+              "last_updated": "2025-10-04T14:35:32.624577",
               "raw_data": {
                 "success": true
               }
@@ -582,7 +670,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:47.429657",
+              "last_updated": "2025-10-04T14:35:34.332801",
               "raw_data": {
                 "success": true
               }
@@ -604,13 +692,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 133.0,
-              "last_updated": "2025-10-03T22:36:48.082745",
+              "usd": 132.99,
+              "last_updated": "2025-10-04T14:35:35.538656",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$133.00",
-                "volume": "14",
-                "median_price": "$111.47"
+                "lowest_price": "$132.99",
+                "volume": "9",
+                "median_price": "$119.69"
               }
             },
             "stattrak": {
@@ -630,11 +718,11 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 102.0,
-              "last_updated": "2025-10-03T22:36:48.755286",
+              "usd": 98.61,
+              "last_updated": "2025-10-04T14:35:36.237003",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$102.00",
+                "lowest_price": "$98.61",
                 "volume": "1",
                 "median_price": "$99.21"
               }
@@ -657,7 +745,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:36:49.441392",
+              "last_updated": "2025-10-04T14:35:36.972659",
               "raw_data": {
                 "success": true
               }
@@ -680,7 +768,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:34.102644",
+              "last_updated": "2025-10-04T14:35:37.709152",
               "raw_data": {
                 "success": true
               }
@@ -721,7 +809,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:35.791980",
+              "last_updated": "2025-10-04T14:35:39.970036",
               "raw_data": {
                 "success": true
               }
@@ -743,13 +831,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 159.77,
-              "last_updated": "2025-10-03T22:37:36.506949",
+              "usd": 161.57,
+              "last_updated": "2025-10-04T14:35:40.705910",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$159.77",
-                "volume": "12",
-                "median_price": "$242.59"
+                "lowest_price": "$161.57",
+                "volume": "8",
+                "median_price": "$161.00"
               }
             },
             "stattrak": {
@@ -769,13 +857,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 98.85,
-              "last_updated": "2025-10-03T22:37:37.237952",
+              "usd": 104.44,
+              "last_updated": "2025-10-04T14:35:41.911604",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$98.85",
-                "volume": "5",
-                "median_price": "$100.02"
+                "lowest_price": "$104.44",
+                "volume": "1",
+                "median_price": "$98.87"
               }
             },
             "stattrak": {
@@ -796,7 +884,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:37.974064",
+              "last_updated": "2025-10-04T14:35:42.632125",
               "raw_data": {
                 "success": true
               }
@@ -819,7 +907,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:38.655045",
+              "last_updated": "2025-10-04T14:35:43.641516",
               "raw_data": {
                 "success": true
               }
@@ -859,13 +947,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 29.5,
-              "last_updated": "2025-10-03T22:37:40.318770",
+              "usd": 30.36,
+              "last_updated": "2025-10-04T14:35:46.267189",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$29.50",
-                "volume": "18",
-                "median_price": "$28.81"
+                "lowest_price": "$30.36",
+                "volume": "27",
+                "median_price": "$29.38"
               }
             },
             "stattrak": {
@@ -885,13 +973,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 29.35,
-              "last_updated": "2025-10-03T22:37:40.969465",
+              "usd": 29.93,
+              "last_updated": "2025-10-04T14:35:47.296039",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$29.35",
+                "lowest_price": "$29.93",
                 "volume": "3",
-                "median_price": "$30.28"
+                "median_price": "$29.69"
               }
             },
             "stattrak": {
@@ -912,7 +1000,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:41.660470",
+              "last_updated": "2025-10-04T14:35:48.010561",
               "raw_data": {
                 "success": true
               }
@@ -935,7 +1023,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:42.357421",
+              "last_updated": "2025-10-04T14:35:48.708190",
               "raw_data": {
                 "success": true
               }
@@ -958,7 +1046,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:43.029424",
+              "last_updated": "2025-10-04T14:35:49.420472",
               "raw_data": {
                 "success": true
               }
@@ -999,7 +1087,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:44.729013",
+              "last_updated": "2025-10-04T14:35:53.062676",
               "raw_data": {
                 "success": true
               }
@@ -1022,7 +1110,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:45.423542",
+              "last_updated": "2025-10-04T14:35:53.771748",
               "raw_data": {
                 "success": true
               }
@@ -1045,7 +1133,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:46.091524",
+              "last_updated": "2025-10-04T14:35:54.470544",
               "raw_data": {
                 "success": true
               }
@@ -1068,7 +1156,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:46.762398",
+              "last_updated": "2025-10-04T14:35:55.170977",
               "raw_data": {
                 "success": true
               }
@@ -1091,7 +1179,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:47.432750",
+              "last_updated": "2025-10-04T14:35:55.892460",
               "raw_data": {
                 "success": true
               }
@@ -1132,7 +1220,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:49.137047",
+              "last_updated": "2025-10-04T14:35:57.610174",
               "raw_data": {
                 "success": true
               }
@@ -1154,13 +1242,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 26.98,
-              "last_updated": "2025-10-03T22:37:49.807365",
+              "usd": 29.79,
+              "last_updated": "2025-10-04T14:35:58.372785",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$26.98",
+                "lowest_price": "$29.79",
                 "volume": "18",
-                "median_price": "$25.80"
+                "median_price": "$29.35"
               }
             },
             "stattrak": {
@@ -1180,13 +1268,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 28.78,
-              "last_updated": "2025-10-03T22:37:50.518289",
+              "usd": 27.69,
+              "last_updated": "2025-10-04T14:35:59.097489",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$28.78",
-                "volume": "7",
-                "median_price": "$28.10"
+                "lowest_price": "$27.69",
+                "volume": "11",
+                "median_price": "$29.35"
               }
             },
             "stattrak": {
@@ -1207,7 +1295,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:37:51.260054",
+              "last_updated": "2025-10-04T14:35:59.817689",
               "raw_data": {
                 "success": true
               }
@@ -1230,7 +1318,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:34.103139",
+              "last_updated": "2025-10-04T14:36:00.511410",
               "raw_data": {
                 "success": true
               }
@@ -1271,7 +1359,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:35.777142",
+              "last_updated": "2025-10-04T14:36:02.232874",
               "raw_data": {
                 "success": true
               }
@@ -1294,7 +1382,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:36.514939",
+              "last_updated": "2025-10-04T14:36:02.966943",
               "raw_data": {
                 "success": true
               }
@@ -1317,7 +1405,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:37.211006",
+              "last_updated": "2025-10-04T14:36:03.765642",
               "raw_data": {
                 "success": true
               }
@@ -1340,7 +1428,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:37.921990",
+              "last_updated": "2025-10-04T14:36:04.527020",
               "raw_data": {
                 "success": true
               }
@@ -1363,7 +1451,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:38.727891",
+              "last_updated": "2025-10-04T14:36:05.331997",
               "raw_data": {
                 "success": true
               }
@@ -1404,7 +1492,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:40.426420",
+              "last_updated": "2025-10-04T14:36:07.047075",
               "raw_data": {
                 "success": true
               }
@@ -1427,7 +1515,7 @@
           "prices": {
             "normal": {
               "usd": 404.84,
-              "last_updated": "2025-10-03T22:38:41.132543",
+              "last_updated": "2025-10-04T14:36:07.741096",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$404.84"
@@ -1451,7 +1539,7 @@
           "prices": {
             "normal": {
               "usd": 170.0,
-              "last_updated": "2025-10-03T22:38:41.862837",
+              "last_updated": "2025-10-04T14:36:08.467240",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$170.00",
@@ -1476,13 +1564,11 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 104.67,
-              "last_updated": "2025-10-03T22:38:42.552232",
+              "usd": 103.5,
+              "last_updated": "2025-10-04T14:36:09.156868",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$104.67",
-                "volume": "1",
-                "median_price": "$100.53"
+                "lowest_price": "$103.50"
               }
             },
             "stattrak": {
@@ -1503,7 +1589,7 @@
           "prices": {
             "normal": {
               "usd": 170.15,
-              "last_updated": "2025-10-03T22:38:43.257194",
+              "last_updated": "2025-10-04T14:36:09.912949",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$170.15"
@@ -1545,7 +1631,7 @@
           "prices": {
             "normal": {
               "usd": 668.88,
-              "last_updated": "2025-10-03T22:38:44.962362",
+              "last_updated": "2025-10-04T14:36:33.655903",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$668.88"
@@ -1569,7 +1655,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:45.631441",
+              "last_updated": "2025-10-04T14:36:34.380953",
               "raw_data": {
                 "success": true
               }
@@ -1592,7 +1678,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:46.315662",
+              "last_updated": "2025-10-04T14:36:35.113418",
               "raw_data": {
                 "success": true
               }
@@ -1615,7 +1701,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:46.975452",
+              "last_updated": "2025-10-04T14:36:35.868675",
               "raw_data": {
                 "success": true
               }
@@ -1638,7 +1724,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:38:47.649543",
+              "last_updated": "2025-10-04T14:36:36.610726",
               "raw_data": {
                 "success": true
               }
@@ -1679,7 +1765,7 @@
           "prices": {
             "normal": {
               "usd": 659.65,
-              "last_updated": "2025-10-03T22:40:43.908409",
+              "last_updated": "2025-10-04T14:36:38.365555",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$659.65"
@@ -1703,7 +1789,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:44.553170",
+              "last_updated": "2025-10-04T14:36:39.097243",
               "raw_data": {
                 "success": true
               }
@@ -1726,7 +1812,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:45.231390",
+              "last_updated": "2025-10-04T14:36:39.806942",
               "raw_data": {
                 "success": true
               }
@@ -1749,7 +1835,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:45.934130",
+              "last_updated": "2025-10-04T14:36:40.627039",
               "raw_data": {
                 "success": true
               }
@@ -1772,7 +1858,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:46.640657",
+              "last_updated": "2025-10-04T14:36:41.343139",
               "raw_data": {
                 "success": true
               }
@@ -1813,7 +1899,7 @@
           "prices": {
             "normal": {
               "usd": 133.78,
-              "last_updated": "2025-10-03T22:40:48.519178",
+              "last_updated": "2025-10-04T14:36:43.097785",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$133.78"
@@ -1837,10 +1923,12 @@
           "prices": {
             "normal": {
               "usd": 121.0,
-              "last_updated": "2025-10-03T22:40:49.190602",
+              "last_updated": "2025-10-04T14:36:43.824818",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$121.00"
+                "lowest_price": "$121.00",
+                "volume": "1",
+                "median_price": "$115.00"
               }
             },
             "stattrak": {
@@ -1861,7 +1949,7 @@
           "prices": {
             "normal": {
               "usd": 176.55,
-              "last_updated": "2025-10-03T22:40:49.865057",
+              "last_updated": "2025-10-04T14:36:44.555757",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$176.55"
@@ -1885,7 +1973,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:50.540194",
+              "last_updated": "2025-10-04T14:36:45.270157",
               "raw_data": {
                 "success": true
               }
@@ -1908,7 +1996,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:40:51.445704",
+              "last_updated": "2025-10-04T14:36:46.275282",
               "raw_data": {
                 "success": true
               }
@@ -1948,11 +2036,11 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 80.0,
-              "last_updated": "2025-10-03T22:40:53.142718",
+              "usd": 79.88,
+              "last_updated": "2025-10-04T14:36:48.285500",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$80.00"
+                "lowest_price": "$79.88"
               }
             },
             "stattrak": {
@@ -1973,10 +2061,12 @@
           "prices": {
             "normal": {
               "usd": 18.28,
-              "last_updated": "2025-10-03T22:40:53.881344",
+              "last_updated": "2025-10-04T14:36:49.026433",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$18.28"
+                "lowest_price": "$18.28",
+                "volume": "3",
+                "median_price": "$18.08"
               }
             },
             "stattrak": {
@@ -1996,13 +2086,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 12.62,
-              "last_updated": "2025-10-03T22:40:54.590254",
+              "usd": 11.99,
+              "last_updated": "2025-10-04T14:36:49.772114",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$12.62",
-                "volume": "3",
-                "median_price": "$12.19"
+                "lowest_price": "$11.99",
+                "volume": "2",
+                "median_price": "$11.27"
               }
             },
             "stattrak": {
@@ -2023,7 +2113,7 @@
           "prices": {
             "normal": {
               "usd": 12.2,
-              "last_updated": "2025-10-03T22:40:55.262532",
+              "last_updated": "2025-10-04T14:36:50.526967",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$12.20",
@@ -2049,11 +2139,11 @@
           "prices": {
             "normal": {
               "usd": 13.49,
-              "last_updated": "2025-10-03T22:40:55.954869",
+              "last_updated": "2025-10-04T14:36:51.231950",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$13.49",
-                "volume": "4",
+                "volume": "2",
                 "median_price": "$10.48"
               }
             },
@@ -2093,7 +2183,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:41:02.130187",
+              "last_updated": "2025-10-04T14:36:54.020449",
               "raw_data": {
                 "success": true
               }
@@ -2116,7 +2206,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:41:02.790028",
+              "last_updated": "2025-10-04T14:36:54.741180",
               "raw_data": {
                 "success": true
               }
@@ -2139,7 +2229,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:41:03.458710",
+              "last_updated": "2025-10-04T14:36:55.449574",
               "raw_data": {
                 "success": true
               }
@@ -2162,7 +2252,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:41:04.119229",
+              "last_updated": "2025-10-04T14:36:56.171922",
               "raw_data": {
                 "success": true
               }
@@ -2185,7 +2275,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:41:04.768436",
+              "last_updated": "2025-10-04T14:36:56.921943",
               "raw_data": {
                 "success": true
               }
@@ -2225,13 +2315,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 6.13,
-              "last_updated": "2025-10-03T22:20:28.311157",
+              "usd": 6.47,
+              "last_updated": "2025-10-04T14:36:58.647398",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$6.13",
-                "volume": "21",
-                "median_price": "$5.57"
+                "lowest_price": "$6.47",
+                "volume": "28",
+                "median_price": "$6.17"
               }
             },
             "stattrak": {
@@ -2251,11 +2341,11 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 17.49,
-              "last_updated": "2025-10-03T22:42:07.060727",
+              "usd": 17.44,
+              "last_updated": "2025-10-04T14:36:59.365168",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$17.49"
+                "lowest_price": "$17.44"
               }
             },
             "stattrak": {
@@ -2276,7 +2366,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:07.738214",
+              "last_updated": "2025-10-04T14:37:00.086463",
               "raw_data": {
                 "success": true
               }
@@ -2299,7 +2389,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:08.405810",
+              "last_updated": "2025-10-04T14:37:00.790176",
               "raw_data": {
                 "success": true
               }
@@ -2322,7 +2412,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:09.087865",
+              "last_updated": "2025-10-04T14:37:01.500794",
               "raw_data": {
                 "success": true
               }
@@ -2363,7 +2453,7 @@
           "prices": {
             "normal": {
               "usd": 119.98,
-              "last_updated": "2025-10-03T22:42:10.750603",
+              "last_updated": "2025-10-04T14:37:03.235998",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$119.98"
@@ -2386,13 +2476,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 12.2,
-              "last_updated": "2025-10-03T22:42:11.460807",
+              "usd": 12.45,
+              "last_updated": "2025-10-04T14:37:03.968378",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$12.20",
-                "volume": "1",
-                "median_price": "$12.97"
+                "lowest_price": "$12.45",
+                "volume": "2",
+                "median_price": "$12.20"
               }
             },
             "stattrak": {
@@ -2413,12 +2503,12 @@
           "prices": {
             "normal": {
               "usd": 5.92,
-              "last_updated": "2025-10-03T22:42:12.211832",
+              "last_updated": "2025-10-04T14:37:04.673199",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$5.92",
-                "volume": "10",
-                "median_price": "$6.15"
+                "volume": "5",
+                "median_price": "$9.20"
               }
             },
             "stattrak": {
@@ -2439,7 +2529,7 @@
           "prices": {
             "normal": {
               "usd": 5.88,
-              "last_updated": "2025-10-03T22:42:12.970794",
+              "last_updated": "2025-10-04T14:37:05.365827",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$5.88"
@@ -2463,11 +2553,11 @@
           "prices": {
             "normal": {
               "usd": 6.01,
-              "last_updated": "2025-10-03T22:42:13.618893",
+              "last_updated": "2025-10-04T14:37:06.081572",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$6.01",
-                "volume": "6",
+                "volume": "3",
                 "median_price": "$5.97"
               }
             },
@@ -2507,12 +2597,10 @@
           "prices": {
             "normal": {
               "usd": 173.0,
-              "last_updated": "2025-10-03T22:42:15.291289",
+              "last_updated": "2025-10-04T14:37:07.817954",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$173.00",
-                "volume": "1",
-                "median_price": "$169.87"
+                "lowest_price": "$173.00"
               }
             },
             "stattrak": {
@@ -2532,13 +2620,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 15.47,
-              "last_updated": "2025-10-03T22:42:15.929765",
+              "usd": 17.02,
+              "last_updated": "2025-10-04T14:37:08.526935",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$15.47",
-                "volume": "6",
-                "median_price": "$15.00"
+                "lowest_price": "$17.02",
+                "volume": "13",
+                "median_price": "$16.74"
               }
             },
             "stattrak": {
@@ -2558,13 +2646,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 5.52,
-              "last_updated": "2025-10-03T22:42:16.601164",
+              "usd": 6.06,
+              "last_updated": "2025-10-04T14:37:09.231100",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$5.52",
-                "volume": "8",
-                "median_price": "$6.35"
+                "lowest_price": "$6.06",
+                "volume": "10",
+                "median_price": "$5.93"
               }
             },
             "stattrak": {
@@ -2585,12 +2673,10 @@
           "prices": {
             "normal": {
               "usd": 6.09,
-              "last_updated": "2025-10-03T22:42:17.263639",
+              "last_updated": "2025-10-04T14:37:09.963075",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$6.09",
-                "volume": "2",
-                "median_price": "$4.96"
+                "lowest_price": "$6.09"
               }
             },
             "stattrak": {
@@ -2610,13 +2696,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 6.06,
-              "last_updated": "2025-10-03T22:42:17.928367",
+              "usd": 5.88,
+              "last_updated": "2025-10-04T14:37:10.691809",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$6.06",
-                "volume": "3",
-                "median_price": "$5.88"
+                "lowest_price": "$5.88",
+                "volume": "7",
+                "median_price": "$5.60"
               }
             },
             "stattrak": {
@@ -2655,7 +2741,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:19.584510",
+              "last_updated": "2025-10-04T14:37:13.949805",
               "raw_data": {
                 "success": true
               }
@@ -2678,7 +2764,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:20.292198",
+              "last_updated": "2025-10-04T14:37:14.670038",
               "raw_data": {
                 "success": true
               }
@@ -2701,7 +2787,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:21.009980",
+              "last_updated": "2025-10-04T14:37:15.367768",
               "raw_data": {
                 "success": true
               }
@@ -2724,7 +2810,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:21.674684",
+              "last_updated": "2025-10-04T14:37:16.076734",
               "raw_data": {
                 "success": true
               }
@@ -2747,7 +2833,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:42:22.419662",
+              "last_updated": "2025-10-04T14:37:16.796306",
               "raw_data": {
                 "success": true
               }
@@ -2787,11 +2873,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 40.6,
-              "last_updated": "2025-10-03T22:43:37.270229",
+              "usd": 43.05,
+              "last_updated": "2025-10-04T14:37:18.662882",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$40.60"
+                "lowest_price": "$43.05",
+                "volume": "1",
+                "median_price": "$40.62"
               }
             },
             "stattrak": {
@@ -2811,13 +2899,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 8.25,
-              "last_updated": "2025-10-03T22:43:38.029459",
+              "usd": 8.48,
+              "last_updated": "2025-10-04T14:37:19.362242",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$8.25",
-                "volume": "1",
-                "median_price": "$8.21"
+                "lowest_price": "$8.48",
+                "volume": "2",
+                "median_price": "$8.27"
               }
             },
             "stattrak": {
@@ -2837,13 +2925,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 2.02,
-              "last_updated": "2025-10-03T22:43:38.853897",
+              "usd": 2.27,
+              "last_updated": "2025-10-04T14:37:20.096285",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$2.02",
-                "volume": "2",
-                "median_price": "$2.32"
+                "lowest_price": "$2.27",
+                "volume": "3",
+                "median_price": "$2.03"
               }
             },
             "stattrak": {
@@ -2864,12 +2952,10 @@
           "prices": {
             "normal": {
               "usd": 3.48,
-              "last_updated": "2025-10-03T22:43:39.556393",
+              "last_updated": "2025-10-04T14:37:20.801697",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$3.48",
-                "volume": "1",
-                "median_price": "$3.46"
+                "lowest_price": "$3.48"
               }
             },
             "stattrak": {
@@ -2890,12 +2976,10 @@
           "prices": {
             "normal": {
               "usd": 2.36,
-              "last_updated": "2025-10-03T22:43:40.229317",
+              "last_updated": "2025-10-04T14:37:21.519689",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$2.36",
-                "volume": "1",
-                "median_price": "$2.16"
+                "lowest_price": "$2.36"
               }
             },
             "stattrak": {
@@ -2934,7 +3018,7 @@
           "prices": {
             "normal": {
               "usd": 33.73,
-              "last_updated": "2025-10-03T22:43:41.958108",
+              "last_updated": "2025-10-04T14:37:23.247404",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$33.73"
@@ -2957,11 +3041,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 4.86,
-              "last_updated": "2025-10-03T22:43:42.689511",
+              "usd": 5.34,
+              "last_updated": "2025-10-04T14:37:24.216711",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$4.86"
+                "lowest_price": "$5.34",
+                "volume": "1",
+                "median_price": "$4.86"
               }
             },
             "stattrak": {
@@ -2981,12 +3067,12 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 1.76,
-              "last_updated": "2025-10-03T22:43:43.449510",
+              "usd": 1.62,
+              "last_updated": "2025-10-04T14:37:24.923411",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$1.76",
-                "volume": "4",
+                "lowest_price": "$1.62",
+                "volume": "3",
                 "median_price": "$1.54"
               }
             },
@@ -3008,7 +3094,7 @@
           "prices": {
             "normal": {
               "usd": 2.13,
-              "last_updated": "2025-10-03T22:43:44.104890",
+              "last_updated": "2025-10-04T14:37:25.628300",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$2.13"
@@ -3031,13 +3117,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 1.81,
-              "last_updated": "2025-10-03T22:43:44.832600",
+              "usd": 1.64,
+              "last_updated": "2025-10-04T14:37:26.423616",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$1.81",
-                "volume": "4",
-                "median_price": "$1.23"
+                "lowest_price": "$1.64",
+                "volume": "5",
+                "median_price": "$1.21"
               }
             },
             "stattrak": {
@@ -3076,7 +3162,7 @@
           "prices": {
             "normal": {
               "usd": 225.05,
-              "last_updated": "2025-10-03T22:43:46.619066",
+              "last_updated": "2025-10-04T14:37:28.128207",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$225.05"
@@ -3099,13 +3185,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 77.0,
-              "last_updated": "2025-10-03T22:43:47.293581",
+              "usd": 67.5,
+              "last_updated": "2025-10-04T14:37:28.849947",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$77.00",
-                "volume": "1",
-                "median_price": "$49.21"
+                "lowest_price": "$67.50",
+                "volume": "2",
+                "median_price": "$80.69"
               }
             },
             "stattrak": {
@@ -3125,11 +3211,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 29.99,
-              "last_updated": "2025-10-03T22:43:47.936913",
+              "usd": 32.86,
+              "last_updated": "2025-10-04T14:37:29.537313",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$29.99"
+                "lowest_price": "$32.86",
+                "volume": "1",
+                "median_price": "$29.99"
               }
             },
             "stattrak": {
@@ -3149,13 +3237,13 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 23.11,
-              "last_updated": "2025-10-03T22:43:48.581164",
+              "usd": 23.74,
+              "last_updated": "2025-10-04T14:37:30.259653",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$23.11",
-                "volume": "2",
-                "median_price": "$23.89"
+                "lowest_price": "$23.74",
+                "volume": "3",
+                "median_price": "$22.74"
               }
             },
             "stattrak": {
@@ -3175,12 +3263,12 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 22.33,
-              "last_updated": "2025-10-03T22:43:49.241869",
+              "usd": 20.7,
+              "last_updated": "2025-10-04T14:37:30.950964",
               "raw_data": {
                 "success": true,
-                "lowest_price": "$22.33",
-                "volume": "2",
+                "lowest_price": "$20.70",
+                "volume": "1",
                 "median_price": "$19.79"
               }
             },
@@ -3220,7 +3308,7 @@
           "prices": {
             "normal": {
               "usd": 0.0,
-              "last_updated": "2025-10-03T22:43:50.891300",
+              "last_updated": "2025-10-04T14:37:32.673411",
               "raw_data": {
                 "success": true
               }
@@ -159853,14 +159941,19 @@
                 "lowest_price": "$1,113.31",
                 "volume": "1",
                 "median_price": "$956.33"
-              }
+              },
+              "success": true,
+              "lowest_price": "$1,106.56",
+              "volume": "2",
+              "median_price": "$1,199.01"
             },
             "stattrak": {
               "usd": 0.0,
               "last_updated": "2025-10-03T20:12:05.478560",
               "raw_data": {
                 "success": true
-              }
+              },
+              "success": true
             }
           }
         },
@@ -159892,7 +159985,11 @@
                 "lowest_price": "$773.51",
                 "volume": "3",
                 "median_price": "$771.85"
-              }
+              },
+              "success": true,
+              "lowest_price": "$646.93",
+              "volume": "2",
+              "median_price": "$745.24"
             }
           }
         },
@@ -159924,7 +160021,11 @@
                 "lowest_price": "$253.66",
                 "volume": "7",
                 "median_price": "$258.77"
-              }
+              },
+              "success": true,
+              "lowest_price": "$230.01",
+              "volume": "1",
+              "median_price": "$250.41"
             }
           }
         },
@@ -159946,7 +160047,11 @@
                 "lowest_price": "$77.35",
                 "volume": "38",
                 "median_price": "$84.56"
-              }
+              },
+              "success": true,
+              "lowest_price": "$83.72",
+              "volume": "29",
+              "median_price": "$81.98"
             },
             "stattrak": {
               "usd": 176.02,
@@ -159956,7 +160061,11 @@
                 "lowest_price": "$176.02",
                 "volume": "5",
                 "median_price": "$160.02"
-              }
+              },
+              "success": true,
+              "lowest_price": "$162.00",
+              "volume": "3",
+              "median_price": "$160.02"
             }
           }
         },
@@ -159978,7 +160087,11 @@
                 "lowest_price": "$68.00",
                 "volume": "28",
                 "median_price": "$65.90"
-              }
+              },
+              "success": true,
+              "lowest_price": "$70.27",
+              "volume": "17",
+              "median_price": "$73.14"
             },
             "stattrak": {
               "usd": 148.43,
@@ -159988,7 +160101,11 @@
                 "lowest_price": "$148.43",
                 "volume": "3",
                 "median_price": "$108.23"
-              }
+              },
+              "success": true,
+              "lowest_price": "$148.42",
+              "volume": "4",
+              "median_price": "$150.01"
             }
           }
         }
@@ -160028,14 +160145,19 @@
                 "lowest_price": "$795.00",
                 "volume": "1",
                 "median_price": "$823.00"
-              }
+              },
+              "success": true,
+              "lowest_price": "$702.00",
+              "volume": "1",
+              "median_price": "$914.68"
             },
             "stattrak": {
               "usd": 0.0,
               "last_updated": "2025-10-03T20:12:15.371108",
               "raw_data": {
                 "success": true
-              }
+              },
+              "success": true
             }
           }
         },
@@ -160057,7 +160179,11 @@
                 "lowest_price": "$189.52",
                 "volume": "25",
                 "median_price": "$185.70"
-              }
+              },
+              "success": true,
+              "lowest_price": "$195.50",
+              "volume": "39",
+              "median_price": "$147.98"
             },
             "stattrak": {
               "usd": 433.16,
@@ -160065,7 +160191,11 @@
               "raw_data": {
                 "success": true,
                 "lowest_price": "$433.16"
-              }
+              },
+              "success": true,
+              "lowest_price": "$420.10",
+              "volume": "2",
+              "median_price": "$421.01"
             }
           }
         },
@@ -160087,7 +160217,11 @@
                 "lowest_price": "$87.07",
                 "volume": "61",
                 "median_price": "$85.40"
-              }
+              },
+              "success": true,
+              "lowest_price": "$87.12",
+              "volume": "54",
+              "median_price": "$81.22"
             },
             "stattrak": {
               "usd": 211.95,
@@ -160097,7 +160231,11 @@
                 "lowest_price": "$211.95",
                 "volume": "6",
                 "median_price": "$180.72"
-              }
+              },
+              "success": true,
+              "lowest_price": "$205.00",
+              "volume": "4",
+              "median_price": "$256.39"
             }
           }
         },
@@ -160119,7 +160257,11 @@
                 "lowest_price": "$51.64",
                 "volume": "41",
                 "median_price": "$51.54"
-              }
+              },
+              "success": true,
+              "lowest_price": "$57.41",
+              "volume": "34",
+              "median_price": "$52.12"
             },
             "stattrak": {
               "usd": 115.32,
@@ -160129,7 +160271,11 @@
                 "lowest_price": "$115.32",
                 "volume": "3",
                 "median_price": "$107.90"
-              }
+              },
+              "success": true,
+              "lowest_price": "$110.30",
+              "volume": "4",
+              "median_price": "$105.01"
             }
           }
         },
@@ -160161,7 +160307,9 @@
                 "lowest_price": "$109.19",
                 "volume": "3",
                 "median_price": "$105.62"
-              }
+              },
+              "success": true,
+              "lowest_price": "$106.95"
             }
           }
         }
@@ -160201,7 +160349,11 @@
                 "lowest_price": "$85.10",
                 "volume": "28",
                 "median_price": "$79.30"
-              }
+              },
+              "success": true,
+              "lowest_price": "$81.57",
+              "volume": "17",
+              "median_price": "$82.72"
             },
             "stattrak": {
               "usd": 257.52,
@@ -160211,7 +160363,11 @@
                 "lowest_price": "$257.52",
                 "volume": "7",
                 "median_price": "$193.62"
-              }
+              },
+              "success": true,
+              "lowest_price": "$210.00",
+              "volume": "2",
+              "median_price": "$203.76"
             }
           }
         },
@@ -160233,7 +160389,11 @@
                 "lowest_price": "$25.39",
                 "volume": "131",
                 "median_price": "$24.75"
-              }
+              },
+              "success": true,
+              "lowest_price": "$24.75",
+              "volume": "137",
+              "median_price": "$24.25"
             },
             "stattrak": {
               "usd": 48.44,
@@ -160243,7 +160403,11 @@
                 "lowest_price": "$48.44",
                 "volume": "16",
                 "median_price": "$49.86"
-              }
+              },
+              "success": true,
+              "lowest_price": "$65.96",
+              "volume": "24",
+              "median_price": "$62.00"
             }
           }
         },
@@ -160265,7 +160429,11 @@
                 "lowest_price": "$11.74",
                 "volume": "157",
                 "median_price": "$12.68"
-              }
+              },
+              "success": true,
+              "lowest_price": "$11.75",
+              "volume": "148",
+              "median_price": "$11.72"
             },
             "stattrak": {
               "usd": 24.75,
@@ -160275,7 +160443,11 @@
                 "lowest_price": "$24.75",
                 "volume": "12",
                 "median_price": "$24.03"
-              }
+              },
+              "success": true,
+              "lowest_price": "$27.66",
+              "volume": "21",
+              "median_price": "$34.04"
             }
           }
         },
@@ -160297,7 +160469,11 @@
                 "lowest_price": "$8.40",
                 "volume": "111",
                 "median_price": "$8.31"
-              }
+              },
+              "success": true,
+              "lowest_price": "$9.09",
+              "volume": "101",
+              "median_price": "$9.14"
             },
             "stattrak": {
               "usd": 26.14,
@@ -160307,7 +160483,11 @@
                 "lowest_price": "$26.14",
                 "volume": "12",
                 "median_price": "$26.76"
-              }
+              },
+              "success": true,
+              "lowest_price": "$26.00",
+              "volume": "17",
+              "median_price": "$25.94"
             }
           }
         },
@@ -160329,7 +160509,11 @@
                 "lowest_price": "$7.50",
                 "volume": "90",
                 "median_price": "$7.55"
-              }
+              },
+              "success": true,
+              "lowest_price": "$7.97",
+              "volume": "78",
+              "median_price": "$8.91"
             },
             "stattrak": {
               "usd": 25.65,
@@ -160339,7 +160523,11 @@
                 "lowest_price": "$25.65",
                 "volume": "18",
                 "median_price": "$22.79"
-              }
+              },
+              "success": true,
+              "lowest_price": "$22.31",
+              "volume": "15",
+              "median_price": "$22.41"
             }
           }
         }
@@ -160373,11 +160561,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$72.99",
+              "volume": "33",
+              "median_price": "$84.27"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$195.47",
+              "volume": "3",
+              "median_price": "$187.57"
             }
           }
         },
@@ -160393,7 +160589,11 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$23.06",
+              "volume": "159",
+              "median_price": "$23.91"
             },
             "stattrak": {
               "usd": 0,
@@ -160413,11 +160613,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$10.27",
+              "volume": "225",
+              "median_price": "$11.30"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$21.58",
+              "volume": "30",
+              "median_price": "$22.30"
             }
           }
         },
@@ -160433,11 +160641,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$8.53",
+              "volume": "160",
+              "median_price": "$8.85"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$19.56",
+              "volume": "20",
+              "median_price": "$19.70"
             }
           }
         },
@@ -160453,11 +160669,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$6.67",
+              "volume": "102",
+              "median_price": "$7.16"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$16.82",
+              "volume": "14",
+              "median_price": "$13.51"
             }
           }
         }
@@ -160491,11 +160715,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$139.00",
+              "volume": "14",
+              "median_price": "$131.25"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$248.78",
+              "volume": "3",
+              "median_price": "$250.67"
             }
           }
         },
@@ -160511,11 +160743,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$39.67",
+              "volume": "105",
+              "median_price": "$37.79"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$73.94",
+              "volume": "15",
+              "median_price": "$80.55"
             }
           }
         },
@@ -160531,11 +160771,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$18.07",
+              "volume": "188",
+              "median_price": "$18.18"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$36.42",
+              "volume": "19",
+              "median_price": "$39.17"
             }
           }
         },
@@ -160551,11 +160799,19 @@
           "prices": {
             "normal": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$12.93",
+              "volume": "95",
+              "median_price": "$13.78"
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$32.86",
+              "volume": "15",
+              "median_price": "$32.87"
             }
           }
         },
@@ -160575,7 +160831,11 @@
             },
             "stattrak": {
               "usd": 0,
-              "last_updated": null
+              "last_updated": null,
+              "success": true,
+              "lowest_price": "$32.38",
+              "volume": "18",
+              "median_price": "$31.02"
             }
           }
         }
