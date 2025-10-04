@@ -179,3 +179,20 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# CS2 Price Database specific files
+# Testing and demo files
+test_*.py
+demo_*.py
+*_test.py
+analyze_*.py
+setup_*.py
+
+# Logs and temporary files
+*.log
+price_collection_checkpoint.json
+proxies.txt
+
+# Analysis and statistics files
+*_analysis.md
+statistics.md
