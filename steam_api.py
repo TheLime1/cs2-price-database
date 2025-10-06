@@ -18,6 +18,16 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Set up dedicated logger for success-only responses
+success_only_logger = logging.getLogger('success_only')
+success_only_handler = logging.FileHandler(
+    'success_only_responses.log', encoding='utf-8')
+success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
+success_only_handler.setFormatter(success_only_formatter)
+success_only_logger.addHandler(success_only_handler)
+success_only_logger.setLevel(logging.INFO)
+success_only_logger.propagate = False  # Don't send to parent loggers
+
 
 class SteamMarketAPIClient:
     """Steam Community Market API client for CS2 item prices with rate limiting"""
@@ -87,7 +97,11 @@ class SteamMarketAPIClient:
         return 0
 
     async def _rate_limited_request(self, url: str, params: Dict[str, Any]) -> tuple[Optional[Dict], float]:
-        """Make a rate-limited request to the Steam Market API with enhanced proxy support and 19 req/min limiting"""
+        """Make a rate-limited request to the Steam Market API with enhanced proxy support and 19 req/min limiting
+
+        NEVER gives up on an item due to proxy failures - will keep retrying with different proxies
+        until successful or Steam API itself returns an error (not proxy-related).
+        """
         if not self.session:
             raise RuntimeError(
                 "API client not initialized. Use async context manager.")
@@ -102,119 +116,159 @@ class SteamMarketAPIClient:
             await semaphore.acquire()
 
         try:
-            # Get next available proxy (handles rate limiting internally)
-            current_proxy = proxy_manager.get_next_available_proxy()
-            proxy_url = current_proxy.url if current_proxy else None
-            proxy_auth = current_proxy.auth if current_proxy else None
-
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    # Check if we can make a request with this proxy
-                    if current_proxy and not proxy_manager.can_make_request(current_proxy):
-                        # Proxy is rate limited, try to get another one
-                        current_proxy = proxy_manager.get_next_available_proxy()
-                        if not current_proxy:
-                            # No proxies available, wait briefly and retry
-                            await asyncio.sleep(1.0)
-                            continue
-                        proxy_url = current_proxy.url
-                        proxy_auth = current_proxy.auth
-
-                    # Record the request for rate limiting
-                    if current_proxy:
-                        proxy_manager.record_request(current_proxy)
-
-                    # Log proxy usage
-                    if current_proxy:
-                        logger.debug(
-                            f"Using proxy: {current_proxy.host}:{current_proxy.port}")
-
-                    request_start = time.time()
-                    async with self.session.get(
-                        url,
-                        params=params,
-                        proxy=proxy_url,
-                        proxy_auth=proxy_auth
-                    ) as response:
-                        request_time = time.time() - request_start
-
-                        if response.status == 200:
-                            data = await response.json()
-                            # Mark proxy as successful if used
-                            if current_proxy:
-                                proxy_manager.mark_proxy_success(
-                                    current_proxy, request_time)
-                            return data, 0.0
-                        elif response.status == 429:
-                            logger.warning(
-                                "Rate limited by Steam API - handling with 61s backoff")
-                            # Handle rate limit with 61-second backoff and proxy rotation
-                            if current_proxy:
-                                proxy_manager.handle_rate_limit(current_proxy)
-                                # Get a fresh proxy for next attempt
-                                if attempt < max_retries - 1:
-                                    current_proxy = proxy_manager.get_next_available_proxy()
-                                    proxy_url = current_proxy.url if current_proxy else None
-                                    proxy_auth = current_proxy.auth if current_proxy else None
-                                    logger.info(
-                                        f"Rotated to fresh proxy: {current_proxy.host}:{current_proxy.port}" if current_proxy else "No proxy available")
-                                    continue
-                            # If no proxy available, return error
-                            return None, 61.0  # 61-second wait indicated
-                        elif response.status == 500:
-                            logger.warning(
-                                "Steam API server error for params: %s", params)
-                            return None, 0.0
-                        else:
-                            logger.error(
-                                "Steam API error: %s for params: %s", response.status, params)
-                            # For non-200 responses, consider it a proxy failure if proxy was used
-                            if current_proxy and response.status in [403, 407, 502, 503]:
-                                proxy_manager.mark_proxy_failed(current_proxy)
-                                if attempt < max_retries - 1:
-                                    current_proxy = proxy_manager.get_next_available_proxy()
-                                    proxy_url = current_proxy.url if current_proxy else None
-                                    proxy_auth = current_proxy.auth if current_proxy else None
-                                    continue
-                            return None, 0.0
-
-                except asyncio.TimeoutError:
-                    logger.error("Steam API request timed out")
-                    if current_proxy:
-                        proxy_manager.mark_proxy_failed(current_proxy)
-                        if attempt < max_retries - 1:
-                            current_proxy = proxy_manager.get_next_available_proxy()
-                            proxy_url = current_proxy.url if current_proxy else None
-                            proxy_auth = current_proxy.auth if current_proxy else None
-                            continue
-                    return None, 0.0
-                except (aiohttp.ClientProxyConnectionError, aiohttp.ClientHttpProxyError) as e:
-                    logger.error(f"Proxy connection error: {e}")
-                    if current_proxy:
-                        proxy_manager.mark_proxy_failed(current_proxy)
-                        if attempt < max_retries - 1:
-                            current_proxy = proxy_manager.get_next_available_proxy()
-                            proxy_url = current_proxy.url if current_proxy else None
-                            proxy_auth = current_proxy.auth if current_proxy else None
-                            continue
-                    return None, 0.0
-                except Exception as e:
-                    logger.error("Steam API request failed: %s", e)
-                    if current_proxy and attempt < max_retries - 1:
-                        proxy_manager.mark_proxy_failed(current_proxy)
-                        current_proxy = proxy_manager.get_next_available_proxy()
-                        proxy_url = current_proxy.url if current_proxy else None
-                        proxy_auth = current_proxy.auth if current_proxy else None
-                        continue
-                    return None, 0.0
-
-            return None, 0.0
-
+            return await self._try_request_with_all_proxies(url, params)
         finally:
             # Release semaphore if we acquired it
             if semaphore:
                 semaphore.release()
+
+    async def _try_request_with_all_proxies(self, url: str, params: Dict[str, Any]) -> tuple[Optional[Dict], float]:
+        """Try request with all available proxies until success or legitimate API error"""
+        max_proxy_cycles = 5  # Try cycling through all proxies up to 5 times
+        max_attempts_per_proxy = 3  # Max attempts per individual proxy
+        total_attempts = 0
+        max_total_attempts = 50  # Absolute maximum to prevent infinite loops
+
+        logger.debug(
+            f"Starting aggressive proxy retry for item: {params.get('market_hash_name', 'unknown')}")
+
+        for cycle in range(max_proxy_cycles):
+            current_proxy = proxy_manager.get_next_available_proxy()
+
+            # If no proxies are available at all, wait and try again
+            if not current_proxy and proxy_manager.use_proxies:
+                logger.warning(
+                    f"No proxies available (cycle {cycle + 1}/{max_proxy_cycles}), waiting 2 seconds before retry...")
+                await asyncio.sleep(2.0)
+                continue
+
+            for _ in range(max_attempts_per_proxy):
+                total_attempts += 1
+                if total_attempts > max_total_attempts:
+                    logger.error(
+                        f"🚫 NEVER SKIP: Reached maximum total attempts ({max_total_attempts}) for {params.get('market_hash_name', 'unknown')} - this should never happen!")
+                    return None, 0.0
+
+                result = await self._try_single_request(url, params, current_proxy, total_attempts)
+
+                # Check result type
+                if result[0] == "success":
+                    logger.debug(
+                        f"✅ Successfully retrieved data for {params.get('market_hash_name', 'unknown')} after {total_attempts} attempts")
+                    return result[1], 0.0
+                elif result[0] == "api_error":
+                    logger.debug(
+                        f"🔴 Legitimate Steam API error for {params.get('market_hash_name', 'unknown')} - not retrying")
+                    return None, 0.0  # Legitimate API error, don't retry
+                elif result[0] == "proxy_error":
+                    logger.debug(
+                        f"🔄 Proxy failed for {params.get('market_hash_name', 'unknown')}, trying next proxy (attempt {total_attempts})")
+                    break  # Try next proxy
+                # "rate_limit" continues to next proxy
+
+        logger.error(
+            f"🚫 NEVER SKIP: Exhausted all proxy retry attempts for {params.get('market_hash_name', 'unknown')} after {total_attempts} attempts across {max_proxy_cycles} cycles")
+        return None, 0.0
+
+    async def _try_single_request(self, url: str, params: Dict[str, Any], current_proxy: Optional[Any], attempt_num: int) -> tuple[str, Optional[Dict]]:
+        """Try a single request with the given proxy. Returns (result_type, data)"""
+        if not self.session:
+            return ("api_error", None)
+
+        try:
+            # Check if we can make a request with this proxy
+            if current_proxy and not proxy_manager.can_make_request(current_proxy):
+                logger.debug(
+                    f"Proxy {current_proxy.host}:{current_proxy.port} is rate limited, getting next proxy")
+                return ("proxy_error", None)
+
+            return await self._execute_request(url, params, current_proxy, attempt_num)
+
+        except asyncio.TimeoutError:
+            proxy_info = f"{current_proxy.host}:{current_proxy.port}" if current_proxy else "direct"
+            logger.warning(
+                f"Request timed out via proxy {proxy_info} - trying next proxy")
+            if current_proxy:
+                proxy_manager.mark_proxy_failed(current_proxy)
+            return ("proxy_error", None)
+        except (aiohttp.ClientProxyConnectionError, aiohttp.ClientHttpProxyError) as e:
+            proxy_info = f"{current_proxy.host}:{current_proxy.port}" if current_proxy else "direct"
+            logger.warning(
+                f"Proxy connection error with {proxy_info}: {e} - trying next proxy")
+            if current_proxy:
+                proxy_manager.mark_proxy_failed(current_proxy)
+            return ("proxy_error", None)
+        except Exception as e:
+            proxy_info = f"{current_proxy.host}:{current_proxy.port}" if current_proxy else "direct"
+            logger.warning(
+                f"Request failed via proxy {proxy_info}: {e} - trying next proxy")
+            if current_proxy:
+                proxy_manager.mark_proxy_failed(current_proxy)
+            return ("proxy_error", None)
+
+    async def _execute_request(self, url: str, params: Dict[str, Any], current_proxy: Optional[Any], attempt_num: int) -> tuple[str, Optional[Dict]]:
+        """Execute the actual HTTP request"""
+        if not self.session:
+            return ("api_error", None)
+
+        # Record the request for rate limiting
+        if current_proxy:
+            proxy_manager.record_request(current_proxy)
+
+        # Log proxy usage
+        proxy_info = f"{current_proxy.host}:{current_proxy.port}" if current_proxy else "direct"
+        logger.debug(f"Using proxy: {proxy_info} (attempt {attempt_num})")
+
+        proxy_url = current_proxy.url if current_proxy else None
+        proxy_auth = current_proxy.auth if current_proxy else None
+
+        request_start = time.time()
+        async with self.session.get(
+            url,
+            params=params,
+            proxy=proxy_url,
+            proxy_auth=proxy_auth
+        ) as response:
+            request_time = time.time() - request_start
+            data = await response.json() if response.status == 200 else None
+            return self._handle_response(response, current_proxy, request_time, attempt_num, params, data)
+
+    def _handle_response(self, response, current_proxy: Optional[Any], request_time: float, attempt_num: int, params: Dict[str, Any], data: Optional[Dict]) -> tuple[str, Optional[Dict]]:
+        """Handle the HTTP response"""
+        if response.status == 200:
+            # Mark proxy as successful if used
+            if current_proxy:
+                proxy_manager.mark_proxy_success(current_proxy, request_time)
+            logger.debug(f"✅ Success after {attempt_num} attempts")
+            return ("success", data)
+        elif response.status == 429:
+            proxy_info = f"{current_proxy.host}:{current_proxy.port}" if current_proxy else "direct"
+            logger.warning(
+                f"Rate limited by Steam API via proxy {proxy_info} - rotating proxy")
+            if current_proxy:
+                proxy_manager.handle_rate_limit(current_proxy)
+            return ("rate_limit", None)
+        elif response.status in [500, 404]:
+            # Steam API server error or item not found - legitimate failure
+            logger.warning(
+                f"Steam API returned {response.status} for params: {params}")
+            return ("api_error", None)
+        else:
+            return self._handle_error_response(response, current_proxy)
+
+    def _handle_error_response(self, response, current_proxy: Optional[Any]) -> tuple[str, Optional[Dict]]:
+        """Handle non-success HTTP responses"""
+        logger.warning(
+            f"Steam API error {response.status} - trying next proxy")
+        if current_proxy and response.status in [403, 407, 502, 503]:
+            proxy_manager.mark_proxy_failed(current_proxy)
+            return ("proxy_error", None)
+        elif response.status in [400, 401, 405]:
+            return ("api_error", None)  # Legitimate API error
+        else:
+            if current_proxy:
+                proxy_manager.mark_proxy_failed(current_proxy)
+            return ("proxy_error", None)
 
     async def get_item_price(self, market_hash_name: str, currency: int = 1) -> tuple[Optional[Dict], float]:
         """
@@ -248,7 +302,32 @@ class SteamMarketAPIClient:
             data, wait_time = await self._rate_limited_request(self.base_url, params)
 
             if data and data.get("success"):
-                # Cache the result
+                # Check if we only got {"success": true} without actual price data
+                if len(data) == 1 and "success" in data and data["success"] is True:
+                    # Construct the full API endpoint URL for debugging
+                    import urllib.parse
+                    query_string = urllib.parse.urlencode(params)
+                    full_url = f"{self.base_url}?{query_string}"
+
+                    # Log to dedicated success-only log file
+                    success_only_logger.info(f"ITEM: {market_hash_name}")
+                    success_only_logger.info(f"URL: {full_url}")
+                    success_only_logger.info(f"RESPONSE: {data}")
+                    success_only_logger.info(
+                        "REASON: Item exists but has no market data or is not tradeable")
+                    success_only_logger.info("-" * 80)
+
+                    # Also log to main logger for debug visibility
+                    logger.warning(
+                        f"🔍 DEBUG: Steam API returned only {{'success': true}} for item: {market_hash_name}")
+                    logger.warning(f"🔗 API Endpoint: {full_url}")
+                    logger.warning(
+                        "This usually means the item exists but has no market data or is not tradeable")
+
+                    # Return None since we don't have actual price data
+                    return None, wait_time
+
+                # Cache the result (only if we have actual price data)
                 self.cache[cache_key] = {
                     "data": data,
                     "timestamp": now

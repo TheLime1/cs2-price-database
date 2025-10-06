@@ -70,9 +70,9 @@ class ProxyManager:
         self.use_proxies = False
         self._proxy_fetch_task = None
 
-        # Enhanced concurrency control - 100 concurrent requests
+        # Enhanced concurrency control - 50 concurrent requests
         self.max_concurrent_requests = int(
-            os.getenv("MAX_CONCURRENT_REQUESTS", "100"))
+            os.getenv("MAX_CONCURRENT_REQUESTS", "50"))
         self._request_semaphore = None
 
         # Rate limiting configuration

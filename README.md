@@ -33,8 +33,30 @@ The CS2 skins database contains:
 
 - `steam_api.py` - Steam Market API client with async support and rate limiting
 - `collect_prices.py` - Main price collection system with checkpoint support
+- `cleanup_invalid_variants.py` - Removes skin variants that don't exist on the market ✨
 - `verify_prices.py` - Utility to verify collected prices
 - `data/skins_database.json` - Database of CS2 skins (expected to exist)
+
+## Database Cleanup (NEW!) ✨
+
+The system now automatically removes skin variants that return `success: True` from the Steam API but have no actual price data. These are variants that technically exist in the API but are **not tradeable or available on the market**.
+
+**Cleanup runs automatically:**
+- ✅ When price collection completes
+- ✅ When you press Ctrl+C during collection
+- ✅ After missing-only collection
+
+**Quick Start:**
+```bash
+# Just run price collection normally - cleanup is automatic!
+python collect_prices.py
+
+# Or run cleanup manually
+python cleanup_invalid_variants.py --dry-run  # Preview changes
+python cleanup_invalid_variants.py             # Apply cleanup
+```
+
+📖 **For detailed information:** See [CLEANUP_QUICKSTART.md](CLEANUP_QUICKSTART.md) or [CLEANUP_GUIDE.md](CLEANUP_GUIDE.md)
 
 ## Setup
 
@@ -148,6 +170,7 @@ python proxy_test.py add proxy.example.com 8080 --username user --password pass
 - **Progress Tracking**: Saves checkpoints to resume interrupted collections
 - **Error Handling**: Graceful handling of network and API errors
 - **Logging**: Comprehensive logging with configurable levels
+- **Automatic Cleanup**: Removes invalid skin variants that don't exist on the market (NEW!) ✨
 
 ## Environment Variables
 

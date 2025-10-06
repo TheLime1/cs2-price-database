@@ -15,6 +15,22 @@ import os
 import re
 import signal
 import sys
+import urllib.parse
+
+# Set up main logger
+logger = logging.getLogger(__name__)
+
+# Set up dedicated logger for success-only responses
+success_only_logger = logging.getLogger('success_only')
+# Check if handler already exists to avoid duplicate handlers
+if not success_only_logger.handlers:
+    success_only_handler = logging.FileHandler(
+        'success_only_responses.log', encoding='utf-8')
+    success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
+    success_only_handler.setFormatter(success_only_formatter)
+    success_only_logger.addHandler(success_only_handler)
+    success_only_logger.setLevel(logging.INFO)
+    success_only_logger.propagate = False  # Don't send to parent loggers
 
 
 def parse_date(date_str: str) -> datetime:
@@ -65,11 +81,12 @@ def safe_log_name(name: str) -> str:
 class PriceCollector:
     """Collects Steam Market prices for CS2 skins with rate limiting and progress tracking"""
 
-    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False):
+    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False):
         self.database_path = database_path
         self.checkpoint_path = checkpoint_path
         self.ignore_stattrak = ignore_stattrak
         self.missing_only = missing_only
+        self.debug = debug
         self.steam_client = SteamMarketAPIClient()
         self.shutdown_requested = False
 
@@ -215,6 +232,10 @@ class PriceCollector:
         self.save_checkpoint()
         self.save_database()
         logger.info("All data saved. Shutdown complete.")
+
+        # Run cleanup to remove invalid variants
+        self.run_cleanup()
+
         sys.exit(0)
 
     def load_database(self):
@@ -266,6 +287,28 @@ class PriceCollector:
 
         logger.info("Database saved with updated prices")
 
+    def run_cleanup(self):
+        """Run the cleanup script to remove invalid variants"""
+        try:
+            from cleanup_invalid_variants import VariantCleaner
+
+            logger.info("\n" + "=" * 80)
+            logger.info("RUNNING AUTOMATIC CLEANUP")
+            logger.info("Removing variants with no market data...")
+            logger.info("=" * 80)
+
+            cleaner = VariantCleaner(database_path=self.database_path)
+            cleaner.run(dry_run=False)
+
+            # Reload the database after cleanup
+            self.load_database()
+
+            logger.info("Cleanup completed successfully!\n")
+        except Exception as e:
+            logger.error(f"Failed to run cleanup: {e}")
+            logger.info(
+                "You can manually run: python cleanup_invalid_variants.py")
+
     def sort_skins_by_date(self) -> List[Tuple[Dict, datetime]]:
         """Sort skins by introduction date (newest first)"""
         logger.info("Sorting skins by introduction date (newest first)...")
@@ -291,8 +334,47 @@ class PriceCollector:
         # Handle StatTrak prefix
         prefix = "StatTrak™ " if stattrak else ""
 
-        # Create the market hash name
-        market_name = f"{prefix}{weapon} | {skin_name} ({wear})"
+        # Fix incorrectly split weapon names in the database
+        # These weapons were split incorrectly and need to be reconstructed
+        weapon_fixes = {
+            "Desert": "Desert Eagle",
+            "Dual": "Dual Berettas",
+            "Galil": "Galil AR",
+            "R8": "R8 Revolver",
+            "SG": "SG 553",
+            "SSG": "SSG 08",
+            "Zeus": "Zeus x27"
+        }
+
+        # If this weapon needs fixing, reconstruct the correct name
+        if weapon in weapon_fixes:
+            # Get the correct weapon name
+            correct_weapon = weapon_fixes[weapon]
+
+            # Extract the actual skin name by removing the weapon part prefix
+            if weapon == "Desert" and skin_name.startswith("Eagle "):
+                actual_skin_name = skin_name[6:]  # Remove "Eagle "
+            elif weapon == "Dual" and skin_name.startswith("Berettas "):
+                actual_skin_name = skin_name[9:]  # Remove "Berettas "
+            elif weapon == "Galil" and skin_name.startswith("AR "):
+                actual_skin_name = skin_name[3:]  # Remove "AR "
+            elif weapon == "R8" and skin_name.startswith("Revolver "):
+                actual_skin_name = skin_name[9:]  # Remove "Revolver "
+            elif weapon == "SG" and skin_name.startswith("553 "):
+                actual_skin_name = skin_name[4:]  # Remove "553 "
+            elif weapon == "SSG" and skin_name.startswith("08 "):
+                actual_skin_name = skin_name[3:]  # Remove "08 "
+            elif weapon == "Zeus" and skin_name.startswith("x27 "):
+                actual_skin_name = skin_name[4:]  # Remove "x27 "
+            else:
+                # Fallback: use the original skin name if prefix doesn't match
+                actual_skin_name = skin_name
+
+            # Create the market hash name with corrected weapon name
+            market_name = f"{prefix}{correct_weapon} | {actual_skin_name} ({wear})"
+        else:
+            # For correctly formatted weapons, use the original logic
+            market_name = f"{prefix}{weapon} | {skin_name} ({wear})"
 
         return market_name
 
@@ -314,7 +396,7 @@ class PriceCollector:
         failed_count = 0
 
         # Get concurrent limit from proxy manager
-        max_concurrent = 10  # Default
+        max_concurrent = 50  # Default
         if hasattr(proxy_manager, 'max_concurrent_requests'):
             max_concurrent = proxy_manager.max_concurrent_requests
 
@@ -457,6 +539,45 @@ class PriceCollector:
             # Get price from Steam Market API (USD) - now returns (data, wait_time)
             price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
 
+            # DEBUG: Dump the raw response for troubleshooting (only if debug enabled)
+            if self.debug:
+                # Construct the full API endpoint URL for debugging
+                base_url = self.steam_client.base_url
+                params = {
+                    "appid": "730",
+                    "currency": "1",
+                    "market_hash_name": market_hash_name
+                }
+                # Build properly encoded query string
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{base_url}?{query_string}"
+
+                logger.info(
+                    f"🔍 DEBUG - Item: {safe_log_name(market_hash_name)}")
+                logger.info(f"🔍 DEBUG - API Endpoint: {full_url}")
+                logger.info(f"🔍 DEBUG - Raw API Response: {price_data}")
+                logger.info(f"🔍 DEBUG - Wait time: {wait_time}")
+
+                # Check for the specific case where we only get {"success": true}
+                if price_data and len(price_data) == 1 and "success" in price_data and price_data["success"] is True:
+                    # Log to dedicated success-only log file
+                    success_only_logger.info(
+                        f"COLLECT_PRICES - ITEM: {safe_log_name(market_hash_name)}")
+                    success_only_logger.info(
+                        f"COLLECT_PRICES - URL: {full_url}")
+                    success_only_logger.info(
+                        f"COLLECT_PRICES - RESPONSE: {price_data}")
+                    success_only_logger.info(
+                        "COLLECT_PRICES - REASON: Item exists but has no market data or is not tradeable")
+                    success_only_logger.info("-" * 80)
+
+                    # Also log to main logger for debug visibility
+                    logger.warning(
+                        "🚨 DEBUG - DETECTED: Only {'success': true} response!")
+                    logger.warning(f"🔗 DEBUG - Link: {full_url}")
+                    logger.warning(
+                        "🔍 DEBUG - This means item exists but has no market data or is not tradeable")
+
             # Calculate response time
             response_time = (datetime.now() - start_time).total_seconds()
 
@@ -465,9 +586,19 @@ class PriceCollector:
                 self.log_api_call(market_hash_name, 200, True,
                                   response_time, wait_time)
 
+                # DEBUG: Show what fields are available (only if debug enabled)
+                if self.debug:
+                    logger.info(
+                        f"🔍 DEBUG - Success=True, Available fields: {list(price_data.keys())}")
+
                 # Parse price strings (e.g., "$123.45" -> 123.45)
                 lowest_price = price_data.get('lowest_price', '$0.00')
                 median_price = price_data.get('median_price', '$0.00')
+
+                # DEBUG: Show the raw price values (only if debug enabled)
+                if self.debug:
+                    logger.info(
+                        f"🔍 DEBUG - lowest_price: '{lowest_price}', median_price: '{median_price}'")
 
                 # Extract numeric value from price string
                 def parse_price(price_str):
@@ -484,8 +615,17 @@ class PriceCollector:
                 lowest = parse_price(lowest_price)
                 median = parse_price(median_price)
 
+                # DEBUG: Show parsed prices (only if debug enabled)
+                if self.debug:
+                    logger.info(
+                        f"🔍 DEBUG - Parsed lowest: {lowest}, median: {median}")
+
                 # Use lowest price as the main price, fallback to median
                 final_price = lowest if lowest > 0 else median
+
+                # DEBUG: Show final decision (only if debug enabled)
+                if self.debug:
+                    logger.info(f"🔍 DEBUG - Final price: {final_price}")
 
                 logger.debug(
                     f"[OK] {safe_log_name(market_hash_name)}: ${final_price}")
@@ -498,6 +638,17 @@ class PriceCollector:
                     'raw_data': price_data
                 }
             else:
+                # DEBUG: Show why it failed
+                logger.info(
+                    f"🔍 DEBUG - FAILED - price_data exists: {price_data is not None}")
+                if price_data:
+                    logger.info(
+                        f"🔍 DEBUG - FAILED - price_data content: {price_data}")
+                    logger.info(
+                        f"🔍 DEBUG - FAILED - success field: {price_data.get('success', 'NOT_FOUND')}")
+                else:
+                    logger.info("🔍 DEBUG - FAILED - price_data is None/empty")
+
                 # Log failed API call (could be rate limit or other error)
                 status_code = 429 if not price_data else 404
                 self.log_api_call(market_hash_name,
@@ -606,7 +757,181 @@ class PriceCollector:
 
         print(f"{'='*60}\\n")
 
+    def build_missing_items_queue(self):
+        """Build a queue of all variants that need price updates"""
+        missing_tasks = []
+
+        logger.info("🔍 Scanning database for missing prices...")
+
+        for skin in self.skins:
+            variants = skin.get('variants', [])
+
+            for variant in variants:
+                # Check normal variant
+                normal_has_price = variant.get('prices', {}).get(
+                    'normal', {}).get('usd', 0) > 0
+                if not normal_has_price:
+                    # (skin, variant, is_stattrak)
+                    missing_tasks.append((skin, variant, False))
+
+                # Check StatTrak variant if not ignoring
+                if not self.ignore_stattrak:
+                    stattrak_has_price = variant.get('prices', {}).get(
+                        'stattrak', {}).get('usd', 0) > 0
+                    if not stattrak_has_price:
+                        missing_tasks.append((skin, variant, True))
+
+        logger.info(
+            f"📋 Found {len(missing_tasks)} missing price entries to process")
+        return missing_tasks
+
     async def collect_all_prices(self, limit: Optional[int] = None, resume: bool = True):
+        """Collect prices for all skins starting from newest"""
+        logger.info("Starting price collection process")
+
+        if self.ignore_stattrak:
+            logger.info("StatTrak variants will be ignored")
+
+        # For missing-only mode, use queue-based approach (no checkpointing needed)
+        if self.missing_only:
+            logger.info(
+                "🎯 Missing-only mode: Building queue of items needing price updates")
+            missing_tasks = self.build_missing_items_queue()
+
+            if not missing_tasks:
+                logger.info(
+                    "✅ All items already have prices - nothing to process!")
+                return
+
+            # Apply limit to missing tasks if specified
+            if limit is not None and limit > 0:
+                # Rough estimate: 10 variants per "limit"
+                missing_tasks = missing_tasks[:limit * 10]
+                logger.info(
+                    f"Limited to approximately first {limit} skins worth of missing items")
+
+            self.stats['total_variants'] = len(missing_tasks)
+            self.stats['total_skins'] = len(
+                set(task[0]['id'] for task in missing_tasks))
+            self.stats['start_time'] = datetime.now()
+
+            logger.info(
+                f"📊 Processing {len(missing_tasks)} missing price entries from {self.stats['total_skins']} skins")
+
+            await self._process_missing_items_queue(missing_tasks)
+            return
+
+        # Regular mode: process skins in order with checkpointing
+        skins_with_dates = self.sort_skins_by_date()
+        self.stats['total_skins'], self.stats['total_variants'] = self.calculate_total_work(
+            skins_with_dates)
+        self.stats['start_time'] = datetime.now()
+
+        logger.info(
+            f"Total work: {self.stats['total_skins']} skins, {self.stats['total_variants']} price requests")
+
+        # Apply limit if specified (limit=0 means no limit)
+        if limit is not None and limit > 0:
+            skins_with_dates = skins_with_dates[:limit]
+            logger.info(f"Limited to first {limit} skins for testing")
+        elif limit == 0:
+            logger.info("No limit applied - processing all skins")
+
+        # Resume from checkpoint if requested
+        start_index = 0
+        if resume and self.checkpoint['last_processed_skin_id']:
+            for i, (skin, _) in enumerate(skins_with_dates):
+                if skin['id'] == self.checkpoint['last_processed_skin_id']:
+                    start_index = i + 1
+                    break
+            logger.info(f"Resuming from skin index {start_index}")
+
+        await self._process_skins_in_order(skins_with_dates, start_index, limit, resume)
+
+    async def _process_missing_items_queue(self, missing_tasks):
+        """Process missing items using pure queue-based approach"""
+        async with self.steam_client:
+            max_concurrent = 50
+            if hasattr(proxy_manager, 'max_concurrent_requests'):
+                max_concurrent = proxy_manager.max_concurrent_requests
+
+            # Process missing items in batches
+            for batch_start in range(0, len(missing_tasks), max_concurrent):
+                if self.shutdown_requested:
+                    logger.info("Shutdown requested - stopping collection...")
+                    break
+
+                batch_end = min(batch_start + max_concurrent,
+                                len(missing_tasks))
+                batch = missing_tasks[batch_start:batch_end]
+
+                logger.info(
+                    f"🔥 Processing batch {batch_start//max_concurrent + 1}: {len(batch)} missing items concurrently")
+
+                try:
+                    # Create all tasks for this batch
+                    tasks = []
+                    task_info = []
+
+                    for skin, variant, is_stattrak in batch:
+                        task = self.collect_price_for_variant(
+                            skin, variant, stattrak=is_stattrak)
+                        tasks.append(task)
+                        task_info.append((skin, variant, is_stattrak))
+
+                    # Execute all tasks concurrently
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                    # Process results
+                    success_count = 0
+                    failed_count = 0
+
+                    for result, (skin, variant, is_stattrak) in zip(results, task_info):
+                        if isinstance(result, Exception):
+                            failed_count += 1
+                        elif result:
+                            # Update the variant with the price data
+                            if is_stattrak:
+                                variant['prices']['stattrak'].update(result)
+                            else:
+                                variant['prices']['normal'].update(result)
+                            success_count += 1
+                        else:
+                            failed_count += 1
+
+                    # Update stats
+                    self.stats['successful_requests'] += success_count
+                    self.stats['failed_requests'] += failed_count
+                    self.stats['processed_variants'] += len(batch)
+
+                    # Save database after each batch (no checkpoint needed for missing-only)
+                    self.save_database()
+
+                    logger.info(
+                        f"  ✅ Batch completed: {success_count} successful, {failed_count} failed")
+
+                    # Print progress every batch
+                    self.print_progress()
+
+                except KeyboardInterrupt:
+                    logger.info(
+                        "Process interrupted by user - saving current progress...")
+                    self.save_database()
+                    logger.info("Progress saved. Safe to exit.")
+                    # Run cleanup before exit
+                    self.run_cleanup()
+                    # Run cleanup before exit
+                    self.run_cleanup()
+                    break
+                except Exception as e:
+                    logger.error(f"Error processing batch: {e}")
+
+        logger.info("🎉 Missing-only price collection completed!")
+
+        # Run cleanup to remove invalid variants
+        self.run_cleanup()
+
+    async def _process_skins_in_order(self, skins_with_dates, start_index, limit=None, resume=True):
         """Collect prices for all skins starting from newest"""
         logger.info("Starting price collection process")
 
@@ -640,44 +965,136 @@ class PriceCollector:
                     break
             logger.info(f"Resuming from skin index {start_index}")
 
-        # Process skins
+        # Process skins with true concurrent processing across multiple skins
         async with self.steam_client:
-            for i, (skin, intro_date) in enumerate(skins_with_dates[start_index:], start_index):
+            # Get concurrent limit from proxy manager
+            max_concurrent = 50  # Default
+            if hasattr(proxy_manager, 'max_concurrent_requests'):
+                max_concurrent = proxy_manager.max_concurrent_requests
+
+            # Calculate how many skins to process in each batch (aim for ~100 variants per batch)
+            avg_variants_per_skin = 5  # Most skins have 5 variants
+            # ~20 skins per batch for 100 concurrent
+            skins_per_batch = max(1, max_concurrent // avg_variants_per_skin)
+
+            remaining_skins = skins_with_dates[start_index:]
+
+            for batch_start in range(0, len(remaining_skins), skins_per_batch):
                 # Check for shutdown request
                 if self.shutdown_requested:
                     logger.info("Shutdown requested - stopping collection...")
                     break
 
+                batch_end = min(batch_start + skins_per_batch,
+                                len(remaining_skins))
+                skin_batch = remaining_skins[batch_start:batch_end]
+
+                logger.info(
+                    f"🔥 Processing batch of {len(skin_batch)} skins concurrently (max {max_concurrent} variants)")
+
                 try:
-                    # Use concurrent processing with multiple proxies
-                    variants = skin.get('variants', [])
-                    await self.process_variants_concurrently(skin, variants, i+1, len(skins_with_dates))
+                    # Create tasks for all variants across multiple skins
+                    all_tasks = []
+                    skin_indices = []
 
-                    self.stats['processed_skins'] += 1
-                    self.checkpoint['processed_skins'] = self.stats['processed_skins']
-                    self.checkpoint['last_processed_skin_id'] = skin['id']
+                    for j, (skin, intro_date) in enumerate(skin_batch):
+                        actual_index = start_index + batch_start + j
+                        variants = skin.get('variants', [])
 
-                    # Save checkpoint after each skin to prevent loss of progress
+                        # Create tasks for this skin's variants
+                        for variant_idx, variant in enumerate(variants):
+                            # Create tasks based on missing_only logic
+                            if self.missing_only:
+                                normal_has_price = variant.get('prices', {}).get(
+                                    'normal', {}).get('usd', 0) > 0
+                                stattrak_has_price = variant.get('prices', {}).get(
+                                    'stattrak', {}).get('usd', 0) > 0
+
+                                # Skip if already has required prices
+                                if self.ignore_stattrak and normal_has_price:
+                                    continue
+                                elif not self.ignore_stattrak and normal_has_price and stattrak_has_price:
+                                    continue
+
+                            # Add normal variant task if needed
+                            if not self.missing_only or variant.get('prices', {}).get('normal', {}).get('usd', 0) <= 0:
+                                task = self.collect_price_for_variant(
+                                    skin, variant, stattrak=False)
+                                all_tasks.append(
+                                    (task, skin, variant, False, actual_index))
+
+                            # Add StatTrak variant task if needed
+                            if not self.ignore_stattrak:
+                                if not self.missing_only or variant.get('prices', {}).get('stattrak', {}).get('usd', 0) <= 0:
+                                    task = self.collect_price_for_variant(
+                                        skin, variant, stattrak=True)
+                                    all_tasks.append(
+                                        (task, skin, variant, True, actual_index))
+
+                    if not all_tasks:
+                        logger.info(
+                            f"  ⏭️  Skipping batch - all items already have prices")
+                        continue
+
+                    logger.info(
+                        f"  📦 Executing {len(all_tasks)} price requests concurrently")
+
+                    # Execute all tasks concurrently with proper batching
+                    tasks_only = [task_info[0] for task_info in all_tasks]
+                    results = await asyncio.gather(*tasks_only, return_exceptions=True)
+
+                    # Process results and update database
+                    success_count = 0
+                    failed_count = 0
+                    processed_skins = set()
+
+                    for i, (result, (_, skin, variant, is_stattrak, skin_index)) in enumerate(zip(results, all_tasks)):
+                        if isinstance(result, Exception):
+                            logger.error(f"  ❌ Task {i+1} failed: {result}")
+                            failed_count += 1
+                        elif result:
+                            # Update the variant with the price data
+                            if is_stattrak:
+                                variant['prices']['stattrak'].update(result)
+                            else:
+                                variant['prices']['normal'].update(result)
+                            success_count += 1
+                            processed_skins.add(skin_index)
+                        else:
+                            failed_count += 1
+
+                    # Update stats and save progress
+                    self.stats['successful_requests'] += success_count
+                    self.stats['failed_requests'] += failed_count
+                    self.stats['processed_variants'] += len(all_tasks)
+                    self.stats['processed_skins'] += len(skin_batch)
+
+                    # Update checkpoint to last skin in batch
+                    if skin_batch:
+                        last_skin = skin_batch[-1][0]
+                        self.checkpoint['processed_skins'] = start_index + batch_end
+                        self.checkpoint['last_processed_skin_id'] = last_skin['id']
+
+                    # Save progress after each batch
                     self.save_checkpoint()
+                    self.save_database()
 
-                    # Print progress every 5 skins
-                    if (i + 1) % 5 == 0:
-                        self.print_progress()
+                    logger.info(
+                        f"  ✅ Batch completed: {success_count} successful, {failed_count} failed")
 
-                    # Brief delay for checkpoint saving only
-                    await asyncio.sleep(0.1)
+                    # Print progress every batch
+                    self.print_progress()
 
                 except KeyboardInterrupt:
                     logger.info(
                         "Process interrupted by user - saving current progress...")
-                    # Ensure we save any completed work before exiting
                     self.save_checkpoint()
                     self.save_database()
                     logger.info("Progress saved. Safe to exit.")
                     break
                 except Exception as e:
-                    logger.error(
-                        f"Error processing skin {skin['full_name']}: {e}")
+                    logger.error(f"Error processing batch: {e}")
+                    # Continue to next batch even if this one fails
                     continue
 
         # Check if shutdown was requested and perform graceful shutdown
@@ -690,6 +1107,9 @@ class PriceCollector:
 
         logger.info("Price collection completed!")
         self.print_progress()
+
+        # Run cleanup to remove invalid variants
+        self.run_cleanup()
 
 
 async def main():
@@ -706,11 +1126,13 @@ async def main():
                         help='Skip StatTrak variants to speed up collection')
     parser.add_argument('--missing-only', action='store_true',
                         help='Only process skins/variants that don\'t have prices yet')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable detailed debug output including API endpoints')
 
     args = parser.parse_args()
 
     collector = PriceCollector(
-        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only)
+        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only, debug=args.debug)
     await collector.collect_all_prices(
         limit=args.limit,
         resume=not args.no_resume
