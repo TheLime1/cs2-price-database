@@ -75,10 +75,10 @@ python collect_prices.py --noproxy
 
 ## Performance Impact
 
-| Configuration | Concurrent Requests | Est. Time for 1000 skins |
-|--------------|--------------------|-----------------------|
-| **With proxies** | 50+ | ~1-2 hours |
-| **Without proxies (--noproxy)** | 1 | ~50 hours |
+| Configuration                   | Concurrent Requests | Est. Time for 1000 skins |
+| ------------------------------- | ------------------- | ------------------------ |
+| **With proxies**                | 50+                 | ~1-2 hours               |
+| **Without proxies (--noproxy)** | 1                   | ~50 hours                |
 
 ## Related Flags
 

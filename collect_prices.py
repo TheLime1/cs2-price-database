@@ -88,12 +88,12 @@ class PriceCollector:
         self.missing_only = missing_only
         self.debug = debug
         self.noproxy = noproxy
-        
+
         # Disable proxies if --noproxy flag is set
         if self.noproxy:
             proxy_manager.use_proxies = False
             logger.info("Proxies disabled via --noproxy flag")
-        
+
         self.steam_client = SteamMarketAPIClient()
         self.shutdown_requested = False
 
