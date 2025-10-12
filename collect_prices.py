@@ -81,12 +81,19 @@ def safe_log_name(name: str) -> str:
 class PriceCollector:
     """Collects Steam Market prices for CS2 skins with rate limiting and progress tracking"""
 
-    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False):
+    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False):
         self.database_path = database_path
         self.checkpoint_path = checkpoint_path
         self.ignore_stattrak = ignore_stattrak
         self.missing_only = missing_only
         self.debug = debug
+        self.noproxy = noproxy
+        
+        # Disable proxies if --noproxy flag is set
+        if self.noproxy:
+            proxy_manager.use_proxies = False
+            logger.info("Proxies disabled via --noproxy flag")
+        
         self.steam_client = SteamMarketAPIClient()
         self.shutdown_requested = False
 
@@ -1128,11 +1135,13 @@ async def main():
                         help='Only process skins/variants that don\'t have prices yet')
     parser.add_argument('--debug', action='store_true',
                         help='Enable detailed debug output including API endpoints')
+    parser.add_argument('--noproxy', action='store_true',
+                        help='Disable proxy usage (use direct connection to Steam API)')
 
     args = parser.parse_args()
 
     collector = PriceCollector(
-        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only, debug=args.debug)
+        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only, debug=args.debug, noproxy=args.noproxy)
     await collector.collect_all_prices(
         limit=args.limit,
         resume=not args.no_resume

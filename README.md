@@ -116,6 +116,12 @@ python collect_prices.py --limit 5 --ignore-stattrak --no-resume
 
 # Fastest option: missing prices only + no StatTrak
 python collect_prices.py --missing-only --ignore-stattrak
+
+# Disable proxies (use direct connection)
+python collect_prices.py --noproxy
+
+# Combine: no proxies, no StatTrak, debug mode
+python collect_prices.py --noproxy --ignore-stattrak --debug
 ```
 
 #### Command-Line Arguments
@@ -136,6 +142,15 @@ python collect_prices.py --missing-only --ignore-stattrak
   - Skips items that already have price data
   - Perfect for updating incomplete collections
   - Combines well with other flags
+
+- `--noproxy`: Disable proxy usage (use direct connection)
+  - Forces direct connection to Steam API without proxies
+  - Useful for debugging or when proxies cause issues
+  - Overrides `USE_PROXIES=true` environment variable
+
+- `--debug`: Enable detailed debug output
+  - Shows API endpoints, raw responses, and timing information
+  - Useful for troubleshooting API issues
 
 ### Verify Collection
 
