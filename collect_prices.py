@@ -11,6 +11,7 @@ from summary_logger import get_summary_logger
 import json
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import os
@@ -132,7 +133,7 @@ def safe_log_name(name: str) -> str:
 class PriceCollector:
     """Collects Steam Market prices for CS2 skins with comprehensive environment-based configuration"""
 
-    def __init__(self, ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False, no_fallback: bool = False):
+    def __init__(self, ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False, no_fallback: bool = False, fallback_only: bool = False, update_availability: bool = False):
         # Load configuration from environment variables
         self.database_path = os.getenv(
             "DATABASE_FILE", "data/skins_database.json")
@@ -146,6 +147,8 @@ class PriceCollector:
             "DEBUG_MODE", "false").lower() == "true"
         self.noproxy = noproxy
         self.no_fallback = no_fallback
+        self.fallback_only = fallback_only
+        self.update_availability = update_availability
 
         # Environment-based configuration
         self.price_update_interval_hours = float(
@@ -393,7 +396,7 @@ class PriceCollector:
         """Save the updated database with artificial delay"""
         # Apply artificial delay before saving
         if self.delay_before_save > 0:
-            asyncio.sleep(self.delay_before_save)
+            time.sleep(self.delay_before_save)
 
         self.database['data_status']['last_price_update'] = datetime.now(
         ).isoformat()
@@ -405,7 +408,7 @@ class PriceCollector:
 
         # Apply artificial delay after saving
         if self.delay_after_save > 0:
-            asyncio.sleep(self.delay_after_save)
+            time.sleep(self.delay_after_save)
 
     def is_price_fresh(self, variant: Dict, stattrak: bool = False) -> bool:
         """Check if price data is fresh enough based on update interval"""
@@ -736,6 +739,89 @@ class PriceCollector:
                 f"❌ Enhanced fallback error for {skin_name} ({wear_condition}): {e}")
             return None
 
+    async def update_weapon_availability(self, skin: Dict) -> bool:
+        """
+        Update weapon availability information using enhanced fallback scraper
+
+        Args:
+            skin: Skin data containing detail_url and variants
+
+        Returns:
+            True if availability was successfully updated, False otherwise
+        """
+        detail_url = skin.get('detail_url')
+        if not detail_url:
+            logger.warning(
+                f"No detail_url found for {skin.get('full_name', 'Unknown')}")
+            return False
+
+        skin_name = skin.get('full_name', 'Unknown')
+
+        try:
+            # Get fallback scraper
+            scraper = await self._get_fallback_scraper()
+
+            # Get comprehensive weapon information
+            logger.info(f"🔍 Analyzing availability for {skin_name}")
+            weapon_info = await scraper.get_weapon_info(detail_url, skin_name)
+
+            if not weapon_info:
+                logger.warning(f"❌ No weapon info available for {skin_name}")
+                return False
+
+            # Extract availability data
+            availability = weapon_info.get('availability', {})
+            stattrak_availability = weapon_info.get(
+                'stattrak_availability', {})
+            listings = weapon_info.get('listings', {})
+
+            # Update each variant with availability information
+            updated_variants = 0
+            current_time = datetime.now().isoformat()
+
+            for variant in skin.get('variants', []):
+                wear_condition = variant.get('wear')
+                if not wear_condition:
+                    continue
+
+                # Update availability flags
+                # Default to True for existing data
+                old_available = variant.get('available', True)
+                old_stattrak_available = variant.get(
+                    'stattrak_available', True)
+
+                new_available = availability.get(wear_condition, False)
+                new_stattrak_available = stattrak_availability.get(
+                    wear_condition, False)
+
+                variant['available'] = new_available
+                variant['stattrak_available'] = new_stattrak_available
+                variant['availability_verified'] = current_time
+
+                # Update listing information
+                wear_key = wear_condition
+                stattrak_key = f"StatTrak {wear_condition}"
+
+                variant['has_normal_listings'] = listings.get(wear_key, False)
+                variant['has_stattrak_listings'] = listings.get(
+                    stattrak_key, False)
+
+                # Log changes
+                if old_available != new_available or old_stattrak_available != new_stattrak_available:
+                    logger.info(f"📋 Updated {skin_name} - {wear_condition}: "
+                                f"Available: {old_available}→{new_available}, "
+                                f"StatTrak: {old_stattrak_available}→{new_stattrak_available}")
+
+                updated_variants += 1
+
+            logger.info(
+                f"✅ Availability updated for {skin_name}: {updated_variants} variants")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error updating availability for {skin_name}: {e}")
+            return False
+
     async def collect_price_for_variant(self, skin: Dict, variant: Dict, stattrak: bool = False) -> Optional[Dict]:
         """Collect price for a single skin variant with freshness checking"""
         market_hash_name = self.create_market_hash_name(
@@ -756,27 +842,35 @@ class PriceCollector:
             # Record start time for response time tracking
             start_time = datetime.now()
 
-            # Construct the full API endpoint URL for logging
-            base_url = self.steam_client.base_url
-            params = {
-                "appid": "730",
-                "currency": "1",
-                "market_hash_name": market_hash_name
-            }
-            query_string = urllib.parse.urlencode(params)
-            full_url = f"{base_url}?{query_string}"
-
-            # ALWAYS log API requests and responses (not just in debug mode)
-            logger.info(f"🌐 API REQUEST: {full_url}")
-
-            # Get price from Steam Market API (USD) - now returns (data, wait_time)
-            price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
-
-            # ALWAYS log API response (not just debug mode)
-            if price_data:
-                logger.info(f"🌐 API RESPONSE: {price_data}")
+            # Skip Steam API if fallback-only mode is enabled
+            if self.fallback_only:
+                logger.info(
+                    f"🕷️ FALLBACK-ONLY MODE: Skipping Steam API for {safe_log_name(market_hash_name)}")
+                price_data = None
+                wait_time = 0
             else:
-                logger.info(f"🌐 API RESPONSE: None (network/proxy error)")
+                # Construct the full API endpoint URL for logging
+                base_url = self.steam_client.base_url
+                params = {
+                    "appid": "730",
+                    "currency": "1",
+                    "market_hash_name": market_hash_name
+                }
+                query_string = urllib.parse.urlencode(params)
+                full_url = f"{base_url}?{query_string}"
+
+                # ALWAYS log API requests and responses (not just in debug mode)
+                logger.info(f"🌐 API REQUEST: {full_url}")
+
+                # Get price from Steam Market API (USD) - now returns (data, wait_time)
+                price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
+
+            # ALWAYS log API response (not just debug mode) - except in fallback-only mode
+            if not self.fallback_only:
+                if price_data:
+                    logger.info(f"🌐 API RESPONSE: {price_data}")
+                else:
+                    logger.info("🌐 API RESPONSE: None (network/proxy error)")
 
             # Additional debug details if debug mode enabled
             if self.debug:
@@ -1267,6 +1361,16 @@ class PriceCollector:
                         actual_index = start_index + batch_start + j
                         variants = skin.get('variants', [])
 
+                        # Update availability information if requested
+                        if self.update_availability:
+                            try:
+                                logger.info(
+                                    f"🔍 Updating availability for {skin['full_name']}")
+                                await self.update_weapon_availability(skin)
+                            except Exception as e:
+                                logger.error(
+                                    f"Failed to update availability for {skin['full_name']}: {e}")
+
                         # Create tasks for this skin's variants
                         for variant_idx, variant in enumerate(variants):
                             # Create tasks based on missing_only logic
@@ -1396,15 +1500,26 @@ async def main():
                         help='Disable proxy usage (use direct connection to Steam API)')
     parser.add_argument('--no-fallback', action='store_true',
                         help='Disable fallback scraping (Steam API only)')
+    parser.add_argument('--fallback-only', action='store_true',
+                        help='Skip Steam API and use only fallback scraping method')
+    parser.add_argument('--update-availability', action='store_true',
+                        help='Update weapon availability information (detect which wear conditions and StatTrak variants actually exist)')
 
     args = parser.parse_args()
+
+    # Validate flag combinations
+    if args.no_fallback and args.fallback_only:
+        parser.error(
+            "--no-fallback and --fallback-only cannot be used together")
 
     collector = PriceCollector(
         ignore_stattrak=args.ignore_stattrak,
         missing_only=args.missing_only,
         debug=args.debug,
         noproxy=args.noproxy,
-        no_fallback=args.no_fallback
+        no_fallback=args.no_fallback,
+        fallback_only=args.fallback_only,
+        update_availability=args.update_availability
     )
 
     # Set up graceful shutdown handler

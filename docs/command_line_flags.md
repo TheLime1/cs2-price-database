@@ -49,6 +49,22 @@ python collect_prices.py --no-resume
 ```bash
 python collect_prices.py --missing-only
 ```
+
+#### `--update-availability`
+**Purpose**: Update weapon availability information to detect which wear conditions and StatTrak variants actually exist  
+**Type**: Boolean flag  
+**Default**: Skip availability updates  
+**Usage**:
+```bash
+python collect_prices.py --update-availability
+```
+**Notes**:
+- Analyzes Steam Market structure to determine actual variant availability
+- Sets `available`, `stattrak_available`, `has_normal_listings`, and `has_stattrak_listings` fields
+- Uses enhanced fallback scraper for comprehensive availability detection
+- Prevents skipping weapons due to proxy issues by using multiple retry attempts
+- Adds processing time but provides valuable data about variant availability
+- Can be combined with other collection flags for comprehensive updates
 **Notes**:
 - Scans entire database for missing prices
 - Skips items that already have valid price data
@@ -85,6 +101,22 @@ python collect_prices.py --noproxy
 - Useful for debugging proxy-related issues
 - May be slower due to rate limiting without proxy rotation
 - Overrides all proxy configuration
+
+#### `--fallback-only`
+**Purpose**: Skip Steam API entirely and use only fallback scraping method  
+**Type**: Boolean flag  
+**Default**: Try Steam API first, then fallback on failure  
+**Usage**:
+```bash
+python collect_prices.py --fallback-only
+```
+**Notes**:
+- Bypasses Steam Market API completely
+- Goes directly to web scraping method for all items
+- Useful when Steam API is completely unavailable or rate-limited
+- Slower than API but more reliable for problem items
+- Cannot be used with `--no-fallback` (conflicting flags)
+- Ideal for collecting data that Steam API consistently fails to provide
 
 ### Debugging and Logging
 
@@ -137,6 +169,12 @@ python collect_prices.py --no-resume
 python collect_prices.py --noproxy --debug
 ```
 
+#### Fallback-Only Collection
+```bash
+# Use only fallback scraping, bypass Steam API entirely
+python collect_prices.py --fallback-only
+```
+
 #### Production Run (Fastest)
 ```bash
 # Missing items only, no StatTrak, no debug output
@@ -163,6 +201,33 @@ python collect_prices.py --missing-only
 python collect_prices.py --limit 10 --noproxy --debug --no-resume
 ```
 
+#### Fallback-Only Troubleshooting
+```bash
+# Fallback scraping only with debug output for 5 items
+python collect_prices.py --fallback-only --limit 5 --debug
+```
+
+#### Complete Fallback Collection
+```bash
+# Full collection using only fallback method (when Steam API is unavailable)
+python collect_prices.py --fallback-only --missing-only
+```
+
+#### Availability Detection
+```bash
+# Update availability information for all weapons
+python collect_prices.py --update-availability
+
+# Update availability for missing items only
+python collect_prices.py --update-availability --missing-only
+
+# Full availability analysis with fallback scraper
+python collect_prices.py --update-availability --fallback-only
+
+# Test availability detection on limited set
+python collect_prices.py --update-availability --limit 5 --debug
+```
+
 ## Flag Precedence and Interactions
 
 ### Processing Mode Priority
@@ -174,6 +239,8 @@ python collect_prices.py --limit 10 --noproxy --debug --no-resume
 
 ### Network Configuration
 - `--noproxy` overrides all environment proxy settings
+- `--fallback-only` bypasses Steam API entirely and uses only web scraping
+- `--no-fallback` and `--fallback-only` cannot be used together (conflicting flags)
 - Proxy settings from environment are used unless `--noproxy` is specified
 - Fallback scraper uses same proxy settings as main collection
 
@@ -186,14 +253,17 @@ python collect_prices.py --limit 10 --noproxy --debug --no-resume
 
 Some flags interact with environment variables:
 
-| Flag                | Environment Variable | Interaction                     |
-| ------------------- | -------------------- | ------------------------------- |
-| `--noproxy`         | `USE_PROXIES`        | Overrides and disables          |
-| `--debug`           | `LOG_LEVEL`          | Sets to DEBUG regardless of env |
-| `--limit`           | None                 | No environment equivalent       |
-| `--missing-only`    | None                 | No environment equivalent       |
-| `--ignore-stattrak` | None                 | No environment equivalent       |
-| `--no-resume`       | None                 | No environment equivalent       |
+| Flag                    | Environment Variable | Interaction                     |
+| ----------------------- | -------------------- | ------------------------------- |
+| `--noproxy`             | `USE_PROXIES`        | Overrides and disables          |
+| `--debug`               | `LOG_LEVEL`          | Sets to DEBUG regardless of env |
+| `--fallback-only`       | None                 | No environment equivalent       |
+| `--no-fallback`         | None                 | No environment equivalent       |
+| `--limit`               | None                 | No environment equivalent       |
+| `--missing-only`        | None                 | No environment equivalent       |
+| `--ignore-stattrak`     | None                 | No environment equivalent       |
+| `--no-resume`           | None                 | No environment equivalent       |
+| `--update-availability` | None                 | No environment equivalent       |
 
 ## Output and Logging
 
@@ -253,6 +323,9 @@ python collect_prices.py --noproxy --debug --limit 5
 
 # Proxy problems
 python collect_prices.py --debug --limit 10
+
+# Steam API unavailable - use fallback only
+python collect_prices.py --fallback-only --debug --limit 5
 
 # Data issues
 python collect_prices.py --missing-only --debug

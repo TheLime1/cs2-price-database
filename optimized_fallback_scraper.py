@@ -259,8 +259,14 @@ class OptimizedCSGODatabaseScraper:
 
         return None
 
-    def _scrape_single_page(self, driver: webdriver.Chrome, detail_url: str, skin_name: str) -> Dict[str, Optional[float]]:
-        """Scrape a single page with given driver (blocking)"""
+    def _scrape_single_page(self, driver: webdriver.Chrome, detail_url: str, skin_name: str) -> Dict[str, Any]:
+        """Scrape a single page with given driver (blocking)
+        Returns: {
+            'prices': Dict[str, Optional[float]], 
+            'availability': Dict[str, bool],
+            'stattrak_availability': Dict[str, bool],
+            'listings': Dict[str, bool]
+        }"""
         try:
             # Navigate to the page
             driver.get(detail_url)
@@ -284,9 +290,10 @@ class OptimizedCSGODatabaseScraper:
 
             # Parse headers to create column mapping
             column_mapping = {}
+            logger.debug(f"🔍 DEBUG - Table headers found: {headers}")
             for i, header in enumerate(headers):
                 header_lower = header.lower().strip()
-                is_stattrak = "stattrak" in header_lower
+                is_stattrak = "stattrak" in header_lower or "stat trak" in header_lower or "st " in header_lower
 
                 wear_condition = None
                 if "factory new" in header_lower:
@@ -303,6 +310,8 @@ class OptimizedCSGODatabaseScraper:
                 if wear_condition:
                     key = f"StatTrak {wear_condition}" if is_stattrak else wear_condition
                     column_mapping[key] = i
+                    logger.debug(
+                        f"🔍 DEBUG - Mapped column {i} '{header}' -> key '{key}'")
 
             # Find Steam row
             rows = table.find_elements(By.CSS_SELECTOR, "tbody tr, tr")
@@ -325,21 +334,76 @@ class OptimizedCSGODatabaseScraper:
             if not steam_row:
                 return {}
 
-            # Extract prices
+            # Extract prices and availability information
             steam_cells = steam_row.find_elements(By.CSS_SELECTOR, "td, th")
-            prices = {}
+            logger.debug(
+                f"🔍 DEBUG - Found {len(steam_cells)} cells in steam row")
+            logger.debug(
+                f"🔍 DEBUG - Available column mappings: {list(column_mapping.keys())}")
 
+            # Initialize result dictionaries
+            prices = {}
+            availability = {}
+            stattrak_availability = {}
+            listings = {}
+
+            # Define all possible wear conditions
+            all_wear_conditions = [
+                "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
+
+            # Process available columns
             for wear_key, col_index in column_mapping.items():
                 if col_index < len(steam_cells):
                     price_text = steam_cells[col_index].text.strip()
                     price = self._parse_price_from_text(price_text)
                     prices[wear_key] = price
 
-            return prices
+                    # Determine if this is StatTrak variant
+                    is_stattrak_variant = wear_key.startswith("StatTrak ")
+                    base_wear = wear_key.replace(
+                        "StatTrak ", "") if is_stattrak_variant else wear_key
+
+                    # Mark availability
+                    if is_stattrak_variant:
+                        stattrak_availability[base_wear] = True
+                    else:
+                        availability[base_wear] = True
+
+                    # Check if there are actual listings (price exists and > 0)
+                    has_listing = price is not None and price > 0
+                    listings[wear_key] = has_listing
+
+                    logger.debug(
+                        f"📊 {wear_key}: price=${price}, available=True, has_listing={has_listing}")
+                else:
+                    logger.debug(
+                        f"❌ Column index {col_index} for '{wear_key}' is out of range")
+
+            # Mark unavailable wear conditions for both normal and StatTrak
+            for wear in all_wear_conditions:
+                if wear not in availability:
+                    availability[wear] = False
+                if wear not in stattrak_availability:
+                    stattrak_availability[wear] = False
+
+            return {
+                'prices': prices,
+                'availability': availability,
+                'stattrak_availability': stattrak_availability,
+                'listings': listings
+            }
 
         except Exception as e:
             logger.error(f"❌ Error scraping {skin_name}: {e}")
-            return {}
+            # Return empty availability data on error
+            all_wear_conditions = [
+                "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
+            return {
+                'prices': {},
+                'availability': {wear: False for wear in all_wear_conditions},
+                'stattrak_availability': {wear: False for wear in all_wear_conditions},
+                'listings': {}
+            }
 
     async def _process_requests(self):
         """Main processing loop for the request queue"""
@@ -363,33 +427,91 @@ class OptimizedCSGODatabaseScraper:
                     request.future.set_result(cached_price)
                     continue
 
-                # Get available driver
-                driver = self.driver_pool.get_driver()
-                if not driver:
-                    logger.warning(
-                        f"⚠️ No available drivers for {request.skin_name}")
-                    request.future.set_result(None)
-                    continue
+                # Implement retry logic with different drivers/proxies
+                max_retries = 3
+                scrape_result = None
+                last_error = None
 
-                try:
-                    # Rate limit this driver
-                    driver_id = str(id(driver))
-                    await self._rate_limit_driver(driver_id)
+                for attempt in range(max_retries):
+                    # Get available driver
+                    driver = self.driver_pool.get_driver()
+                    if not driver:
+                        if attempt == max_retries - 1:
+                            logger.error(
+                                f"❌ No available drivers after {max_retries} attempts for {request.skin_name}")
+                            request.future.set_result(None)
+                            break
+                        else:
+                            logger.warning(
+                                f"⚠️ No available drivers (attempt {attempt + 1}/{max_retries}) for {request.skin_name}, retrying...")
+                            await asyncio.sleep(2)  # Wait before retry
+                            continue
 
-                    # Scrape in thread pool to avoid blocking
-                    loop = asyncio.get_event_loop()
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        all_prices = await loop.run_in_executor(
-                            executor,
-                            self._scrape_single_page,
-                            driver,
-                            request.detail_url,
-                            request.skin_name
-                        )
+                    try:
+                        # Rate limit this driver
+                        driver_id = str(id(driver))
+                        await self._rate_limit_driver(driver_id)
 
-                    # Extract specific price
+                        logger.debug(
+                            f"🔄 Attempt {attempt + 1}/{max_retries} for {request.skin_name}")
+
+                        # Scrape in thread pool to avoid blocking
+                        loop = asyncio.get_event_loop()
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            scrape_result = await loop.run_in_executor(
+                                executor,
+                                self._scrape_single_page,
+                                driver,
+                                request.detail_url,
+                                request.skin_name
+                            )
+
+                        # If we got a result, break out of retry loop
+                        if scrape_result and scrape_result.get('prices'):
+                            logger.debug(
+                                f"✅ Success on attempt {attempt + 1} for {request.skin_name}")
+                            break
+                        elif attempt < max_retries - 1:
+                            logger.warning(
+                                f"⚠️ Empty result on attempt {attempt + 1}, retrying {request.skin_name}")
+
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(
+                            f"⚠️ Attempt {attempt + 1} failed for {request.skin_name}: {e}")
+                        if attempt == max_retries - 1:
+                            logger.error(
+                                f"❌ All {max_retries} attempts failed for {request.skin_name}")
+
+                    finally:
+                        # Always return driver to pool
+                        if driver:
+                            self.driver_pool.return_driver(driver)
+                            driver = None
+
+                # Process the result if we got one
+                if scrape_result:
+                    # Extract specific price from result
                     key = f"StatTrak {request.wear_condition}" if request.stattrak else request.wear_condition
-                    price = all_prices.get(key)
+                    prices = scrape_result.get('prices', {})
+                    logger.debug(
+                        f"🔍 DEBUG - Scraping returned {len(prices)} prices")
+                    logger.debug(f"🔍 DEBUG - Looking for key: '{key}'")
+                    logger.debug(
+                        f"🔍 DEBUG - Available keys: {list(prices.keys())}")
+
+                    price = prices.get(key)
+
+                    # Debug logging
+                    if not price:
+                        logger.debug(
+                            f"🔍 DEBUG - No price found for key '{key}'")
+                        if prices:
+                            logger.debug(
+                                f"🔍 DEBUG - All prices data: {prices}")
+                        else:
+                            logger.debug(
+                                "🔍 DEBUG - prices dictionary is empty - scraping failed")
 
                     # Cache result
                     self.result_cache[cache_key] = {
@@ -399,21 +521,19 @@ class OptimizedCSGODatabaseScraper:
 
                     if price:
                         logger.info(
-                            f"✅ Scraped {request.skin_name} ({request.wear_condition}{'StatTrak™' if request.stattrak else ''}): ${price:.2f}")
+                            f"✅ Scraped {request.skin_name} ({request.wear_condition}{' StatTrak™' if request.stattrak else ''}): ${price:.2f}")
                     else:
                         logger.info(
-                            f"❌ No price for {request.skin_name} ({request.wear_condition}{'StatTrak™' if request.stattrak else ''})")
+                            f"❌ No price for {request.skin_name} ({request.wear_condition}{' StatTrak™' if request.stattrak else ''})")
 
                     request.future.set_result(price)
-
-                except Exception as e:
+                else:
+                    # All retries failed
                     logger.error(
-                        f"❌ Error processing {request.skin_name}: {e}")
+                        f"❌ Failed to scrape {request.skin_name} after {max_retries} attempts")
+                    if last_error:
+                        logger.error(f"❌ Last error: {last_error}")
                     request.future.set_result(None)
-
-                finally:
-                    # Return driver to pool
-                    self.driver_pool.return_driver(driver)
 
             except Exception as e:
                 logger.error(f"❌ Error in processing loop: {e}")
@@ -451,6 +571,64 @@ class OptimizedCSGODatabaseScraper:
             logger.error(
                 f"⏰ Timeout waiting for {skin_name} ({wear_condition})")
             return None
+
+    async def get_weapon_info(self, detail_url: str, skin_name: str) -> Dict[str, Any]:
+        """Get comprehensive weapon information including prices, availability, and listings"""
+        if not self.is_running:
+            raise RuntimeError(
+                "Scraper not started. Use async context manager or call start()")
+
+        # Use a dummy request to trigger the comprehensive scraping
+        # We'll scrape the page once and extract all information
+        try:
+            driver = self.driver_pool.get_driver()
+            if not driver:
+                logger.error(f"⚠️ No available drivers for {skin_name}")
+                return self._get_empty_weapon_info()
+
+            try:
+                # Rate limit this driver
+                driver_id = str(id(driver))
+                await self._rate_limit_driver(driver_id)
+
+                # Scrape in thread pool to avoid blocking
+                loop = asyncio.get_event_loop()
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    result = await loop.run_in_executor(
+                        executor,
+                        self._scrape_single_page,
+                        driver,
+                        detail_url,
+                        skin_name
+                    )
+
+                logger.info(
+                    f"🔍 Analyzed {skin_name}: found {len(result.get('prices', {}))} price points")
+                return result
+
+            except Exception as e:
+                logger.error(
+                    f"❌ Error getting weapon info for {skin_name}: {e}")
+                return self._get_empty_weapon_info()
+
+            finally:
+                # Return driver to pool
+                self.driver_pool.return_driver(driver)
+
+        except Exception as e:
+            logger.error(f"❌ Error in get_weapon_info: {e}")
+            return self._get_empty_weapon_info()
+
+    def _get_empty_weapon_info(self) -> Dict[str, Any]:
+        """Return empty weapon info structure"""
+        all_wear_conditions = ["Factory New", "Minimal Wear",
+                               "Field-Tested", "Well-Worn", "Battle-Scarred"]
+        return {
+            'prices': {},
+            'availability': dict.fromkeys(all_wear_conditions, False),
+            'stattrak_availability': dict.fromkeys(all_wear_conditions, False),
+            'listings': {}
+        }
 
 # Test function
 

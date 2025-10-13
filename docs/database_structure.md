@@ -90,6 +90,9 @@ Each variant represents a different wear condition of the skin:
   "float_range": [0.0, 0.07],
   "available": true,
   "stattrak_available": true,
+  "has_normal_listings": true,
+  "has_stattrak_listings": true,
+  "availability_verified": "2025-10-13T23:38:54.688000",
   "prices": {
     "normal": {
       "usd": 824.14,
@@ -115,14 +118,17 @@ Each variant represents a different wear condition of the skin:
 
 ### Variant Fields
 
-| Field                | Type    | Description                               |
-| -------------------- | ------- | ----------------------------------------- |
-| `wear`               | string  | Full wear condition name                  |
-| `wear_short`         | string  | Abbreviated wear condition                |
-| `float_range`        | array   | [min, max] float values                   |
-| `available`          | boolean | Whether variant exists                    |
-| `stattrak_available` | boolean | Whether StatTrak version exists           |
-| `prices`             | object  | Price information for normal and StatTrak |
+| Field                   | Type              | Description                                      |
+| ----------------------- | ----------------- | ------------------------------------------------ |
+| `wear`                  | string            | Full wear condition name                         |
+| `wear_short`            | string            | Abbreviated wear condition                       |
+| `float_range`           | array             | [min, max] float values                          |
+| `available`             | boolean           | Whether variant exists on marketplace            |
+| `stattrak_available`    | boolean           | Whether StatTrak version exists                  |
+| `has_normal_listings`   | boolean           | Whether normal variant has active listings       |
+| `has_stattrak_listings` | boolean           | Whether StatTrak variant has active listings     |
+| `availability_verified` | string (ISO 8601) | When availability was last verified via scraping |
+| `prices`                | object            | Price information for normal and StatTrak        |
 
 ## Price Object Structure
 
@@ -163,6 +169,60 @@ Price objects contain current market data:
 | `median_price` | string  | Median market price (optional)                |
 | `volume`       | string  | Trading volume (optional)                     |
 | `source`       | string  | Data source ("steam_api", "fallback_scraper") |
+
+## Availability Detection System
+
+### Enhanced Fallback Mechanism
+
+The database now includes comprehensive availability detection powered by the fallback scraper system. This system analyzes actual marketplace data to determine:
+
+#### Availability Fields
+
+- **`available`**: Indicates if the wear condition exists for the weapon (e.g., some weapons don't have Factory New condition)
+- **`stattrak_available`**: Indicates if StatTrak variant exists for that wear condition
+- **`has_normal_listings`**: Whether there are active marketplace listings for the normal variant
+- **`has_stattrak_listings`**: Whether there are active marketplace listings for the StatTrak variant
+- **`availability_verified`**: Timestamp when availability was last verified through scraping
+
+#### Detection Process
+
+1. **Scraping Analysis**: The fallback scraper examines the marketplace page structure
+2. **Column Detection**: Identifies which wear conditions and StatTrak variants have columns in the price table
+3. **Listing Verification**: Checks if actual prices exist (indicating active listings)
+4. **Availability Mapping**: Maps findings to boolean availability flags
+
+#### Examples
+
+**UMP-45 Grand Prix** (Limited availability):
+```json
+{
+  "wear": "Factory New",
+  "available": false,
+  "stattrak_available": false,
+  "has_normal_listings": false,
+  "has_stattrak_listings": false
+}
+```
+
+**AK-47 The Oligarch** (Missing StatTrak Factory New):
+```json
+{
+  "wear": "Factory New", 
+  "available": true,
+  "stattrak_available": false,
+  "has_normal_listings": true,
+  "has_stattrak_listings": false
+}
+```
+
+### Proxy Management & Reliability
+
+The system implements advanced proxy retry mechanisms to ensure no weapons are skipped due to network issues:
+
+- **Multiple Retry Attempts**: Up to 3 attempts per weapon with different proxy connections
+- **Automatic Proxy Rotation**: Switches to different proxies on failure
+- **Rate Limiting**: Prevents overwhelming target servers
+- **Comprehensive Error Handling**: Logs detailed failure information for troubleshooting
 
 ## Wear Conditions
 
