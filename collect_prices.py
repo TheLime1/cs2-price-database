@@ -1,11 +1,13 @@
 """
 Price Collection System for CS2 Skins
-Collects Steam Market prices for all skins starting from newest to oldest
-Respects Steam API rate limits (18 calls/minute) and provides progress tracking
+Collects Steam Market prices for all skins with comprehensive logging,
+environment-based configuration, and intelligent price freshness checking.
 """
 
 from steam_api import SteamMarketAPIClient
 from proxy_manager import proxy_manager
+from optimized_fallback_scraper import OptimizedCSGODatabaseScraper
+from summary_logger import get_summary_logger
 import json
 import asyncio
 import logging
@@ -16,21 +18,77 @@ import re
 import signal
 import sys
 import urllib.parse
+from dotenv import load_dotenv
 
-# Set up main logger
+# Load environment variables
+load_dotenv()
+
+# Environment-based configuration
+LOG_DIR = os.getenv("LOG_DIR", "logs")
+MAIN_LOG_FILE = os.getenv("MAIN_LOG_FILE", "price_collection.log")
+SUCCESS_ONLY_LOG_FILE = os.getenv(
+    "SUCCESS_ONLY_LOG_FILE", "success_only_responses.log")
+API_RATE_LOG_FILE = os.getenv("API_RATE_LOG_FILE", "api_rate_test.log")
+
+# Ensure log directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Set up comprehensive logging system
+
+
+def setup_logging():
+    """Configure logging with environment-based settings"""
+    log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper())
+
+    # Main logger configuration
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(os.path.join(
+                LOG_DIR, MAIN_LOG_FILE), encoding='utf-8'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+    # Set up specialized loggers
+    setup_success_only_logger()
+    setup_api_rate_logger()
+
+
+def setup_success_only_logger():
+    """Set up logger for API responses with success but no price data"""
+    success_only_logger = logging.getLogger('success_only')
+    if not success_only_logger.handlers:
+        handler = logging.FileHandler(
+            os.path.join(LOG_DIR, SUCCESS_ONLY_LOG_FILE), encoding='utf-8'
+        )
+        formatter = logging.Formatter('%(asctime)s | %(message)s')
+        handler.setFormatter(formatter)
+        success_only_logger.addHandler(handler)
+        success_only_logger.setLevel(logging.INFO)
+        success_only_logger.propagate = False
+
+
+def setup_api_rate_logger():
+    """Set up logger for API rate testing and performance monitoring"""
+    api_rate_logger = logging.getLogger('api_rate')
+    if not api_rate_logger.handlers:
+        handler = logging.FileHandler(
+            os.path.join(LOG_DIR, API_RATE_LOG_FILE), encoding='utf-8'
+        )
+        formatter = logging.Formatter('%(asctime)s | %(message)s')
+        handler.setFormatter(formatter)
+        api_rate_logger.addHandler(handler)
+        api_rate_logger.setLevel(logging.INFO)
+        api_rate_logger.propagate = False
+
+
+# Initialize logging
+setup_logging()
 logger = logging.getLogger(__name__)
-
-# Set up dedicated logger for success-only responses
 success_only_logger = logging.getLogger('success_only')
-# Check if handler already exists to avoid duplicate handlers
-if not success_only_logger.handlers:
-    success_only_handler = logging.FileHandler(
-        'success_only_responses.log', encoding='utf-8')
-    success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
-    success_only_handler.setFormatter(success_only_formatter)
-    success_only_logger.addHandler(success_only_handler)
-    success_only_logger.setLevel(logging.INFO)
-    success_only_logger.propagate = False  # Don't send to parent loggers
+api_rate_logger = logging.getLogger('api_rate')
 
 
 def parse_date(date_str: str) -> datetime:
@@ -79,25 +137,67 @@ def safe_log_name(name: str) -> str:
 
 
 class PriceCollector:
-    """Collects Steam Market prices for CS2 skins with rate limiting and progress tracking"""
+    """Collects Steam Market prices for CS2 skins with comprehensive environment-based configuration"""
 
-    def __init__(self, database_path: str = "data/skins_database.json", checkpoint_path: str = "price_collection_checkpoint.json", ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False):
-        self.database_path = database_path
-        self.checkpoint_path = checkpoint_path
+    def __init__(self, ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False):
+        # Load configuration from environment variables
+        self.database_path = os.getenv(
+            "DATABASE_FILE", "data/skins_database.json")
+        self.checkpoint_path = os.getenv(
+            "CHECKPOINT_FILE", "price_collection_checkpoint.json")
+
+        # Command line flags (override environment)
         self.ignore_stattrak = ignore_stattrak
         self.missing_only = missing_only
-        self.debug = debug
+        self.debug = debug or os.getenv(
+            "DEBUG_MODE", "false").lower() == "true"
         self.noproxy = noproxy
 
-        # Disable proxies if --noproxy flag is set
+        # Environment-based configuration
+        self.price_update_interval_hours = float(
+            os.getenv("PRICE_UPDATE_INTERVAL_HOURS", "24"))
+        self.max_concurrent_requests = int(
+            os.getenv("MAX_CONCURRENT_REQUESTS", "50"))
+        self.webdriver_pool_size = int(os.getenv("WEBDRIVER_POOL_SIZE", "3"))
+        self.batch_size_skins = int(os.getenv("BATCH_SIZE_SKINS", "20"))
+        self.batch_size_variants = int(os.getenv("BATCH_SIZE_VARIANTS", "50"))
+        self.batch_size_missing_items = int(
+            os.getenv("BATCH_SIZE_MISSING_ITEMS", "50"))
+
+        # Artificial delays (configurable)
+        self.delay_between_requests = float(
+            os.getenv("DELAY_BETWEEN_REQUESTS", "0.1"))
+        self.delay_between_batches = float(
+            os.getenv("DELAY_BETWEEN_BATCHES", "2.0"))
+        self.delay_between_skins = float(
+            os.getenv("DELAY_BETWEEN_SKINS", "0.5"))
+        self.delay_before_save = float(os.getenv("DELAY_BEFORE_SAVE", "0.1"))
+        self.delay_after_save = float(os.getenv("DELAY_AFTER_SAVE", "0.2"))
+
+        # Proxy configuration
         if self.noproxy:
             proxy_manager.use_proxies = False
             logger.info("Proxies disabled via --noproxy flag")
 
+        # Initialize clients
         self.steam_client = SteamMarketAPIClient()
+        self.fallback_scraper = None
         self.shutdown_requested = False
 
-        # API rate tracking for testing
+        # Initialize summary logger
+        self.summary_logger = get_summary_logger()
+
+        # Collect all environment variables for summary
+        env_vars = {k: v for k, v in os.environ.items() if not any(
+            sensitive in k.lower() for sensitive in ['password', 'auth', 'token', 'key', 'secret']
+        )}
+        self.summary_logger.initialize_stats(env_vars)
+
+        # Initialize fallback scraper (will be created when needed)
+        self.fallback_scraper = None
+        self.fallback_pool_size = 3  # Number of concurrent WebDriver instances
+        # Add your proxies here if needed        # API rate tracking for testing
+        self.fallback_proxies = []
         self.api_call_log = []
         self.rate_test_enabled = True  # Set to False to disable rate tracking
 
@@ -238,6 +338,20 @@ class PriceCollector:
         logger.info("Performing graceful shutdown...")
         self.save_checkpoint()
         self.save_database()
+
+        # Clean up fallback scraper if it exists
+        if self.fallback_scraper:
+            logger.info("Cleaning up fallback scraper...")
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self._cleanup_fallback_scraper())
+                else:
+                    asyncio.run(self._cleanup_fallback_scraper())
+            except Exception as e:
+                logger.warning(f"Error cleaning up fallback scraper: {e}")
+
         logger.info("All data saved. Shutdown complete.")
 
         # Run cleanup to remove invalid variants
@@ -285,7 +399,11 @@ class PriceCollector:
         logger.debug("Checkpoint saved")
 
     def save_database(self):
-        """Save the updated database"""
+        """Save the updated database with artificial delay"""
+        # Apply artificial delay before saving
+        if self.delay_before_save > 0:
+            asyncio.sleep(self.delay_before_save)
+
         self.database['data_status']['last_price_update'] = datetime.now(
         ).isoformat()
 
@@ -293,6 +411,42 @@ class PriceCollector:
             json.dump(self.database, f, indent=2, ensure_ascii=False)
 
         logger.info("Database saved with updated prices")
+
+        # Apply artificial delay after saving
+        if self.delay_after_save > 0:
+            asyncio.sleep(self.delay_after_save)
+
+    def is_price_fresh(self, variant: Dict, stattrak: bool = False) -> bool:
+        """Check if price data is fresh enough based on update interval"""
+        if self.price_update_interval_hours <= 0:
+            return False  # Always update if interval is 0 or negative
+
+        price_type = 'stattrak' if stattrak else 'normal'
+        prices = variant.get('prices', {})
+
+        if price_type not in prices:
+            return False  # No price data exists
+
+        price_data = prices[price_type]
+        if not price_data.get('last_updated'):
+            return False  # No timestamp available
+
+        try:
+            last_updated = datetime.fromisoformat(price_data['last_updated'])
+            now = datetime.now()
+            hours_since_update = (now - last_updated).total_seconds() / 3600
+
+            is_fresh = hours_since_update < self.price_update_interval_hours
+
+            if is_fresh and self.debug:
+                logger.debug(
+                    f"Price is fresh ({hours_since_update:.1f}h old, limit: {self.price_update_interval_hours}h)")
+
+            return is_fresh
+
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Could not parse last_updated timestamp: {e}")
+            return False  # Invalid timestamp, treat as stale
 
     def run_cleanup(self):
         """Run the cleanup script to remove invalid variants"""
@@ -534,12 +688,102 @@ class PriceCollector:
 
         return total_skins, total_variants
 
+    async def _get_fallback_scraper(self):
+        """Get or create optimized fallback scraper instance"""
+        if self.fallback_scraper is None:
+            logger.info(
+                f"🚀 Initializing optimized fallback scraper with {self.fallback_pool_size} drivers")
+            self.fallback_scraper = OptimizedCSGODatabaseScraper(
+                pool_size=self.fallback_pool_size,
+                proxies=self.fallback_proxies,
+                headless=True
+            )
+            await self.fallback_scraper.start()
+        return self.fallback_scraper
+
+    async def _cleanup_fallback_scraper(self):
+        """Clean up optimized fallback scraper"""
+        if self.fallback_scraper:
+            try:
+                await self.fallback_scraper.stop()
+            except Exception as e:
+                logger.warning(f"Error cleaning up fallback scraper: {e}")
+            finally:
+                self.fallback_scraper = None
+
+    async def _try_fallback_price(self, skin: Dict, variant: Dict, stattrak: bool = False) -> Optional[Dict]:
+        """
+        Try to get price using enhanced fallback scraper
+
+        Args:
+            skin: Skin data containing detail_url
+            variant: Variant data containing wear condition
+            stattrak: Whether this is a StatTrak variant
+
+        Returns:
+            Price data dict or None if fallback fails
+        """
+        detail_url = skin.get('detail_url')
+        if not detail_url:
+            logger.warning(
+                f"No detail_url found for {skin.get('full_name', 'Unknown')}")
+            return None
+
+        skin_name = skin.get('full_name', 'Unknown')
+        wear_condition = variant.get('wear', 'Unknown')
+
+        try:
+            # Get fallback scraper
+            scraper = await self._get_fallback_scraper()
+
+            # Try to get price using enhanced fallback
+            logger.info(
+                f"🔄 Attempting enhanced fallback for {skin_name} ({wear_condition}) {'StatTrak™' if stattrak else 'Normal'}")
+
+            # Get price for this specific wear condition and StatTrak variant
+            final_price = await scraper.get_price(detail_url, skin_name, wear_condition, stattrak)
+
+            if final_price and final_price > 0:
+                logger.info(
+                    f"✅ Enhanced fallback success: {skin_name} ({wear_condition}) {'StatTrak™' if stattrak else 'Normal'} = ${final_price:.2f}")
+
+                # Create price data in same format as Steam API
+                return {
+                    'usd': final_price,
+                    'last_updated': datetime.now().isoformat(),
+                    'raw_data': {
+                        'success': True,
+                        'lowest_price': f"${final_price:.2f}",
+                        'source': 'enhanced_fallback_scraper'
+                    }
+                }
+            else:
+                logger.info(
+                    f"❌ Enhanced fallback: No price available for {skin_name} ({wear_condition}) {'StatTrak™' if stattrak else 'Normal'}")
+                return None
+
+        except Exception as e:
+            logger.error(
+                f"❌ Enhanced fallback error for {skin_name} ({wear_condition}): {e}")
+            return None
+
     async def collect_price_for_variant(self, skin: Dict, variant: Dict, stattrak: bool = False) -> Optional[Dict]:
-        """Collect price for a single skin variant"""
+        """Collect price for a single skin variant with freshness checking"""
         market_hash_name = self.create_market_hash_name(
             skin, variant, stattrak)
 
+        # Check if price is fresh enough (skip if recently updated)
+        if not self.missing_only and self.is_price_fresh(variant, stattrak):
+            if self.debug:
+                logger.debug(
+                    f"Skipping {safe_log_name(market_hash_name)} - price is fresh")
+            return None
+
         try:
+            # Apply artificial delay before request
+            if self.delay_between_requests > 0:
+                await asyncio.sleep(self.delay_between_requests)
+
             # Record start time for response time tracking
             start_time = datetime.now()
 
@@ -637,12 +881,15 @@ class PriceCollector:
                 logger.debug(
                     f"[OK] {safe_log_name(market_hash_name)}: ${final_price}")
 
-                self.stats['successful_requests'] += 1
+                # Log success to summary logger
+                self.summary_logger.log_steam_api_success(response_time)
 
                 return {
                     'usd': final_price,
                     'last_updated': datetime.now().isoformat(),
-                    'raw_data': price_data
+                    'raw_data': price_data,
+                    'success': True,
+                    'lowest_price': f"${final_price:.2f}"
                 }
             else:
                 # DEBUG: Show why it failed
@@ -658,17 +905,59 @@ class PriceCollector:
 
                 # Log failed API call (could be rate limit or other error)
                 status_code = 429 if not price_data else 404
-                self.log_api_call(market_hash_name,
-                                  status_code, False, response_time, wait_time)
+                self.log_api_call(market_hash_name, status_code,
+                                  False, response_time, wait_time)
+
+                # Log rate limit hit to summary logger
+                if status_code == 429:
+                    self.summary_logger.log_rate_limit_hit()
+
+                # Check if this is a case where we should try fallback
+                should_try_fallback = False
+
+                # Try fallback if:
+                # 1. We got success=True but no price data (item exists but not tradeable)
+                # 2. We got a rate limit (429) - instead of waiting 61 seconds
+                # 3. We got no response at all
+                if price_data and price_data.get('success') and not price_data.get('lowest_price'):
+                    logger.info(
+                        f"🔄 Steam API returned success but no price data for {safe_log_name(market_hash_name)} - trying fallback")
+                    should_try_fallback = True
+                elif status_code == 429:
+                    logger.info(
+                        f"🔄 Rate limit hit for {safe_log_name(market_hash_name)} - trying fallback instead of waiting")
+                    should_try_fallback = True
+                elif not price_data:
+                    logger.info(
+                        f"🔄 No response from Steam API for {safe_log_name(market_hash_name)} - trying fallback")
+                    should_try_fallback = True
+
+                if should_try_fallback:
+                    fallback_result = await self._try_fallback_price(skin, variant, stattrak)
+                    if fallback_result:
+                        # Log fallback success
+                        fallback_response_time = (
+                            datetime.now() - start_time).total_seconds()
+                        self.summary_logger.log_fallback_success(
+                            fallback_response_time)
+                        return fallback_result
+                    else:
+                        # Log fallback failure
+                        self.summary_logger.log_fallback_failure()
+
+                # Log Steam API failure
+                self.summary_logger.log_steam_api_failure()
 
                 logger.warning(
                     f"[FAIL] No price data for {safe_log_name(market_hash_name)}")
-                self.stats['failed_requests'] += 1
                 return None
 
         except Exception as e:
             # Log exception as failed call
             self.log_api_call(market_hash_name, 500, False, 0)
+
+            # Log network error to summary logger
+            self.summary_logger.log_network_error()
 
             logger.error(
                 f"Error collecting price for {safe_log_name(market_hash_name)}: {e}")
@@ -1122,6 +1411,7 @@ class PriceCollector:
 async def main():
     """Main function to run price collection"""
     import argparse
+    import signal
 
     parser = argparse.ArgumentParser(
         description='Collect Steam Market prices for CS2 skins')
@@ -1141,11 +1431,44 @@ async def main():
     args = parser.parse_args()
 
     collector = PriceCollector(
-        ignore_stattrak=args.ignore_stattrak, missing_only=args.missing_only, debug=args.debug, noproxy=args.noproxy)
-    await collector.collect_all_prices(
-        limit=args.limit,
-        resume=not args.no_resume
+        ignore_stattrak=args.ignore_stattrak,
+        missing_only=args.missing_only,
+        debug=args.debug,
+        noproxy=args.noproxy
     )
+
+    # Set up graceful shutdown handler
+    def signal_handler(signum, frame):
+        logger.info("🛑 Received shutdown signal. Generating summary report...")
+        # Generate final summary report
+        collector.summary_logger.generate_summary_report()
+        logger.info("📊 Summary report saved to logs/summary.txt")
+        exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    try:
+        await collector.collect_all_prices(
+            limit=args.limit,
+            resume=not args.no_resume
+        )
+
+        # Generate final summary report on normal completion
+        collector.summary_logger.generate_summary_report()
+        logger.info(
+            "✅ Collection completed. Summary report saved to logs/summary.txt")
+
+    except KeyboardInterrupt:
+        logger.info(
+            "🛑 Collection interrupted by user. Generating summary report...")
+        collector.summary_logger.generate_summary_report()
+        logger.info("📊 Summary report saved to logs/summary.txt")
+    except Exception as e:
+        logger.error(f"❌ Unexpected error during collection: {e}")
+        collector.summary_logger.generate_summary_report()
+        logger.info("📊 Summary report saved to logs/summary.txt")
+        raise
 
 
 if __name__ == "__main__":
