@@ -1,14 +1,13 @@
 {
   "version": "1.0",
-  "generated_at": "2025-10-13T19:38:55.900077",
+  "generated_at": "2025-10-03T19:10:18.018190",
   "total_skins": 1361,
   "data_status": {
     "base_info": "complete",
     "wear_availability": "assumed_all (needs verification)",
     "stattrak_availability": "assumed_all (needs verification)",
     "prices": "not_fetched (all set to 0)",
-    "last_price_update": "2025-10-13T20:06:36.624339",
-    "last_cleanup": "2025-10-13T19:38:55.900077"
+    "last_price_update": "2025-10-13T19:38:55.561481"
   },
   "skins": [
     {
@@ -71,6 +70,94 @@
               },
               "success": true,
               "lowest_price": null
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:46:19.582460",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Field-Tested",
+          "wear_short": "FT",
+          "float_range": [
+            0.15,
+            0.38
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.923605",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:46:19.919971",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Well-Worn",
+          "wear_short": "WW",
+          "float_range": [
+            0.38,
+            0.45
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.557083",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:46:20.930619",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Battle-Scarred",
+          "wear_short": "BS",
+          "float_range": [
+            0.45,
+            1.0
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.598110",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:46:19.514584",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         }
@@ -308,6 +395,112 @@
               }
             }
           }
+        },
+        {
+          "wear": "Minimal Wear",
+          "wear_short": "MW",
+          "float_range": [
+            0.07,
+            0.15
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.538046",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:26.371480",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Field-Tested",
+          "wear_short": "FT",
+          "float_range": [
+            0.15,
+            0.38
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.981633",
+              "raw_data": {
+                "success": true
+              }
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:27.771952",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Well-Worn",
+          "wear_short": "WW",
+          "float_range": [
+            0.38,
+            0.45
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.898232",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:17.792387",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Battle-Scarred",
+          "wear_short": "BS",
+          "float_range": [
+            0.45,
+            1.0
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:58.004942",
+              "raw_data": {
+                "success": true
+              }
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:09:30.825856",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
         }
       ],
       "metadata": {
@@ -397,9 +590,71 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.925604",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
+            }
+          }
+        },
+        {
+          "wear": "Well-Worn",
+          "wear_short": "WW",
+          "float_range": [
+            0.38,
+            0.45
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.929605",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.703405",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Battle-Scarred",
+          "wear_short": "BS",
+          "float_range": [
+            0.45,
+            1.0
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.462441",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:17.029478",
+              "raw_data": {
+                "success": true
+              }
             }
           }
         }
@@ -421,6 +676,33 @@
       "introduced": "14 August 2013",
       "detail_url": "https://www.csgodatabase.com/skins/usp-s-dark-water/",
       "variants": [
+        {
+          "wear": "Factory New",
+          "wear_short": "FN",
+          "float_range": [
+            0.0,
+            0.07
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:59.598669",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.804690",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
         {
           "wear": "Minimal Wear",
           "wear_short": "MW",
@@ -480,6 +762,60 @@
               }
             }
           }
+        },
+        {
+          "wear": "Well-Worn",
+          "wear_short": "WW",
+          "float_range": [
+            0.38,
+            0.45
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.979634",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.921272",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Battle-Scarred",
+          "wear_short": "BS",
+          "float_range": [
+            0.45,
+            1.0
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.226168",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.787012",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
         }
       ],
       "metadata": {
@@ -499,6 +835,33 @@
       "introduced": "14 August 2013",
       "detail_url": "https://www.csgodatabase.com/skins/m4a1-s-dark-water/",
       "variants": [
+        {
+          "wear": "Factory New",
+          "wear_short": "FN",
+          "float_range": [
+            0.0,
+            0.07
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:58.002346",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.794529",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
         {
           "wear": "Minimal Wear",
           "wear_short": "MW",
@@ -555,6 +918,60 @@
               "raw_data": {
                 "success": true,
                 "lowest_price": "$164.29"
+              }
+            }
+          }
+        },
+        {
+          "wear": "Well-Worn",
+          "wear_short": "WW",
+          "float_range": [
+            0.38,
+            0.45
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.900576",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.813714",
+              "raw_data": {
+                "success": true
+              }
+            }
+          }
+        },
+        {
+          "wear": "Battle-Scarred",
+          "wear_short": "BS",
+          "float_range": [
+            0.45,
+            1.0
+          ],
+          "available": true,
+          "stattrak_available": true,
+          "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:16.751749",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:18:17.035981",
+              "raw_data": {
+                "success": true
               }
             }
           }
@@ -639,6 +1056,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.496039",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -655,6 +1080,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.541047",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -671,6 +1104,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.927605",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -705,6 +1146,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:35:53.062676",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -748,6 +1197,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:35:54.470544",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -791,6 +1248,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:35:55.892460",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -825,6 +1290,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:35:57.610174",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -899,6 +1372,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:35:59.817689",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -915,6 +1396,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:00.511410",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -949,6 +1438,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:50.523962",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -965,6 +1462,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:02.577788",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -981,6 +1486,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.697927",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -997,6 +1509,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:04.527020",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1013,6 +1532,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:05.331997",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1047,6 +1573,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:07.047075",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1203,6 +1736,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:34.380953",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1219,6 +1759,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:07.358610",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1235,6 +1782,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:50.357275",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1251,6 +1806,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:36.610726",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1309,6 +1871,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:39.097243",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1325,6 +1895,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:39.806942",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1341,6 +1918,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:40.627039",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1357,6 +1941,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:41.343139",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1465,6 +2056,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:05.465190",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1481,6 +2080,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:46.275282",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1661,6 +2268,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:54.020449",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1702,6 +2317,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:36:55.449574",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1718,6 +2340,15 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 24.03,
+              "last_updated": "2025-10-05T17:51:05.339233",
+              "raw_data": {
+                "success": true,
+                "volume": "1",
+                "median_price": "$24.03"
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1827,6 +2458,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:04.887878",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1843,6 +2482,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:00.790176",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -1859,6 +2505,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:01.500794",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2181,6 +2834,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:13.949805",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2197,6 +2857,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:14.670038",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2213,6 +2880,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:15.367768",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2229,6 +2903,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:16.076734",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2245,6 +2926,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:16.796306",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2713,6 +3401,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-04T14:37:32.673411",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2753,6 +3448,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.983138",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2769,6 +3471,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:05.671191",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2785,6 +3495,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:43:53.587069",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2873,6 +3591,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:02.560270",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2889,6 +3614,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:02.559270",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -2905,6 +3637,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.758099",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3035,6 +3774,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:02.580792",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3069,6 +3816,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:15.207381",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3133,6 +3888,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.459442",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3149,6 +3912,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:04.915679",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3757,6 +4528,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:02.562270",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3825,6 +4604,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:52:05.831952",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3841,6 +4628,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:00.521853",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3951,6 +4746,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:52:54.112719",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -3967,6 +4769,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:52:54.805065",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4219,6 +5029,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.192786",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4235,6 +5052,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:53:03.796269",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4515,6 +5339,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:53:56.601845",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4549,6 +5380,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:25.718884",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4615,6 +5454,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:54:00.839302",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4631,6 +5478,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:24.575355",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4743,6 +5598,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:57.682896",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -4759,6 +5622,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:58.676673",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5083,6 +5954,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:55:00.272638",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5099,6 +5978,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:55:00.957641",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5115,6 +6002,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:55:01.649207",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5131,6 +6026,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:01.060735",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5147,6 +6050,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:54.315655",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -5755,6 +6666,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:51:00.320719",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -6167,6 +7086,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:27.781711",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -6435,6 +7362,15 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T22:57:52.142170",
+              "raw_data": {
+                "success": true
+              },
+              "success": true,
+              "lowest_price": "$485.20"
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -6565,6 +7501,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:05:24.439549",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -7263,6 +8207,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.410054",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -7405,6 +8357,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T17:50:56.388525",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -8646,6 +9605,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:06:31.321177",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -8662,6 +9629,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:06:23.963472",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -8678,6 +9652,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:06:23.450509",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -12215,6 +13197,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:06:56.936299",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -12231,6 +13221,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:17.832282",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -12247,6 +13245,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:06.607820",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -12263,6 +13268,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:06:55.123203",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13094,6 +14107,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:25.703508",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13170,6 +14190,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:24.132616",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13346,6 +14373,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:24.378707",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13383,6 +14418,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:26.221609",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13399,6 +14442,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:24.662883",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13454,6 +14504,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:23.739189",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -13974,6 +15032,14 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:24.405741",
+              "success": true,
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -14010,6 +15076,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:24.333580",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -15050,6 +16123,13 @@
           "available": true,
           "stattrak_available": true,
           "prices": {
+            "normal": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T16:07:23.390498",
+              "raw_data": {
+                "success": true
+              }
+            },
             "stattrak": {
               "usd": 0,
               "last_updated": null
@@ -173799,6 +174879,14 @@
               "lowest_price": "$1,106.56",
               "volume": "2",
               "median_price": "$1,199.01"
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-05T15:21:17.141805",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
             }
           }
         },
@@ -173999,6 +175087,14 @@
               "lowest_price": "$620.00",
               "volume": "1",
               "median_price": "$914.68"
+            },
+            "stattrak": {
+              "usd": 0.0,
+              "last_updated": "2025-10-03T20:12:15.371108",
+              "raw_data": {
+                "success": true
+              },
+              "success": true
             }
           }
         },

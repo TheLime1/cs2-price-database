@@ -40,13 +40,13 @@ def setup_logging():
     """Configure logging with environment-based settings"""
     log_level = getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper())
 
-    # Main logger configuration
+    # Main logger configuration (OVERWRITE mode - clean logs each run)
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(os.path.join(
-                LOG_DIR, MAIN_LOG_FILE), encoding='utf-8'),
+                LOG_DIR, MAIN_LOG_FILE), mode='w', encoding='utf-8'),  # OVERWRITE mode
             logging.StreamHandler(sys.stdout)
         ]
     )
@@ -61,7 +61,7 @@ def setup_success_only_logger():
     success_only_logger = logging.getLogger('success_only')
     if not success_only_logger.handlers:
         handler = logging.FileHandler(
-            os.path.join(LOG_DIR, SUCCESS_ONLY_LOG_FILE), encoding='utf-8'
+            os.path.join(LOG_DIR, SUCCESS_ONLY_LOG_FILE), mode='w', encoding='utf-8'
         )
         formatter = logging.Formatter('%(asctime)s | %(message)s')
         handler.setFormatter(formatter)
@@ -75,7 +75,7 @@ def setup_api_rate_logger():
     api_rate_logger = logging.getLogger('api_rate')
     if not api_rate_logger.handlers:
         handler = logging.FileHandler(
-            os.path.join(LOG_DIR, API_RATE_LOG_FILE), encoding='utf-8'
+            os.path.join(LOG_DIR, API_RATE_LOG_FILE), mode='w', encoding='utf-8'
         )
         formatter = logging.Formatter('%(asctime)s | %(message)s')
         handler.setFormatter(formatter)
@@ -119,15 +119,8 @@ def parse_date(date_str: str) -> datetime:
         return datetime.min
 
 
-# Set up logging with UTF-8 encoding
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('price_collection.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+# Logging is already set up in setup_logging() function above
+# This duplicate configuration is removed to prevent log file overwriting
 logger = logging.getLogger(__name__)
 
 
@@ -139,7 +132,7 @@ def safe_log_name(name: str) -> str:
 class PriceCollector:
     """Collects Steam Market prices for CS2 skins with comprehensive environment-based configuration"""
 
-    def __init__(self, ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False):
+    def __init__(self, ignore_stattrak: bool = False, missing_only: bool = False, debug: bool = False, noproxy: bool = False, no_fallback: bool = False):
         # Load configuration from environment variables
         self.database_path = os.getenv(
             "DATABASE_FILE", "data/skins_database.json")
@@ -152,6 +145,7 @@ class PriceCollector:
         self.debug = debug or os.getenv(
             "DEBUG_MODE", "false").lower() == "true"
         self.noproxy = noproxy
+        self.no_fallback = no_fallback
 
         # Environment-based configuration
         self.price_update_interval_hours = float(
@@ -354,9 +348,6 @@ class PriceCollector:
 
         logger.info("All data saved. Shutdown complete.")
 
-        # Run cleanup to remove invalid variants
-        self.run_cleanup()
-
         sys.exit(0)
 
     def load_database(self):
@@ -447,28 +438,6 @@ class PriceCollector:
         except (ValueError, TypeError) as e:
             logger.debug(f"Could not parse last_updated timestamp: {e}")
             return False  # Invalid timestamp, treat as stale
-
-    def run_cleanup(self):
-        """Run the cleanup script to remove invalid variants"""
-        try:
-            from cleanup_invalid_variants import VariantCleaner
-
-            logger.info("\n" + "=" * 80)
-            logger.info("RUNNING AUTOMATIC CLEANUP")
-            logger.info("Removing variants with no market data...")
-            logger.info("=" * 80)
-
-            cleaner = VariantCleaner(database_path=self.database_path)
-            cleaner.run(dry_run=False)
-
-            # Reload the database after cleanup
-            self.load_database()
-
-            logger.info("Cleanup completed successfully!\n")
-        except Exception as e:
-            logger.error(f"Failed to run cleanup: {e}")
-            logger.info(
-                "You can manually run: python cleanup_invalid_variants.py")
 
     def sort_skins_by_date(self) -> List[Tuple[Dict, datetime]]:
         """Sort skins by introduction date (newest first)"""
@@ -787,47 +756,50 @@ class PriceCollector:
             # Record start time for response time tracking
             start_time = datetime.now()
 
+            # Construct the full API endpoint URL for logging
+            base_url = self.steam_client.base_url
+            params = {
+                "appid": "730",
+                "currency": "1",
+                "market_hash_name": market_hash_name
+            }
+            query_string = urllib.parse.urlencode(params)
+            full_url = f"{base_url}?{query_string}"
+
+            # ALWAYS log API requests and responses (not just in debug mode)
+            logger.info(f"🌐 API REQUEST: {full_url}")
+
             # Get price from Steam Market API (USD) - now returns (data, wait_time)
             price_data, wait_time = await self.steam_client.get_item_price(market_hash_name, currency=1)
 
-            # DEBUG: Dump the raw response for troubleshooting (only if debug enabled)
-            if self.debug:
-                # Construct the full API endpoint URL for debugging
-                base_url = self.steam_client.base_url
-                params = {
-                    "appid": "730",
-                    "currency": "1",
-                    "market_hash_name": market_hash_name
-                }
-                # Build properly encoded query string
-                query_string = urllib.parse.urlencode(params)
-                full_url = f"{base_url}?{query_string}"
+            # ALWAYS log API response (not just debug mode)
+            if price_data:
+                logger.info(f"🌐 API RESPONSE: {price_data}")
+            else:
+                logger.info(f"🌐 API RESPONSE: None (network/proxy error)")
 
+            # Additional debug details if debug mode enabled
+            if self.debug:
                 logger.info(
                     f"🔍 DEBUG - Item: {safe_log_name(market_hash_name)}")
-                logger.info(f"🔍 DEBUG - API Endpoint: {full_url}")
-                logger.info(f"🔍 DEBUG - Raw API Response: {price_data}")
                 logger.info(f"🔍 DEBUG - Wait time: {wait_time}")
 
-                # Check for the specific case where we only get {"success": true}
-                if price_data and len(price_data) == 1 and "success" in price_data and price_data["success"] is True:
-                    # Log to dedicated success-only log file
-                    success_only_logger.info(
-                        f"COLLECT_PRICES - ITEM: {safe_log_name(market_hash_name)}")
-                    success_only_logger.info(
-                        f"COLLECT_PRICES - URL: {full_url}")
-                    success_only_logger.info(
-                        f"COLLECT_PRICES - RESPONSE: {price_data}")
-                    success_only_logger.info(
-                        "COLLECT_PRICES - REASON: Item exists but has no market data or is not tradeable")
-                    success_only_logger.info("-" * 80)
+            # Log special cases to dedicated file
+            if price_data and len(price_data) == 1 and "success" in price_data and price_data["success"] is True:
+                success_only_logger.info(
+                    f"ITEM: {safe_log_name(market_hash_name)}")
+                success_only_logger.info(f"URL: {full_url}")
+                success_only_logger.info(f"RESPONSE: {price_data}")
+                success_only_logger.info(
+                    "REASON: Item exists but has no market data")
+                success_only_logger.info("-" * 80)
 
-                    # Also log to main logger for debug visibility
-                    logger.warning(
-                        "🚨 DEBUG - DETECTED: Only {'success': true} response!")
-                    logger.warning(f"🔗 DEBUG - Link: {full_url}")
-                    logger.warning(
-                        "🔍 DEBUG - This means item exists but has no market data or is not tradeable")
+                # Also log to main logger for debug visibility
+                logger.warning(
+                    "🚨 DEBUG - DETECTED: Only {'success': true} response!")
+                logger.warning(f"🔗 DEBUG - Link: {full_url}")
+                logger.warning(
+                    "🔍 DEBUG - This means item exists but has no market data or is not tradeable")
 
             # Calculate response time
             response_time = (datetime.now() - start_time).total_seconds()
@@ -903,36 +875,41 @@ class PriceCollector:
                 else:
                     logger.info("🔍 DEBUG - FAILED - price_data is None/empty")
 
-                # Log failed API call (could be rate limit or other error)
-                status_code = 429 if not price_data else 404
+                # Determine the actual failure reason
+                if not price_data:
+                    # No response data - this is likely a proxy/network failure, NOT rate limit
+                    status_code = 500  # Network/proxy error
+                    failure_reason = "proxy/network failure"
+                    logger.info(
+                        f"🔌 Network/proxy failure for {safe_log_name(market_hash_name)} - trying fallback")
+                else:
+                    # Got response but no price data - could be rate limit or item not available
+                    status_code = 404  # Not available
+                    failure_reason = "no price data available"
+                    logger.info(
+                        f"🔄 No price data available for {safe_log_name(market_hash_name)} - trying fallback")
+
                 self.log_api_call(market_hash_name, status_code,
                                   False, response_time, wait_time)
 
-                # Log rate limit hit to summary logger
-                if status_code == 429:
-                    self.summary_logger.log_rate_limit_hit()
+                # Only log rate limit if we actually got a 429 response from the API
+                # (Not when proxies fail to connect)
 
                 # Check if this is a case where we should try fallback
                 should_try_fallback = False
 
                 # Try fallback if:
                 # 1. We got success=True but no price data (item exists but not tradeable)
-                # 2. We got a rate limit (429) - instead of waiting 61 seconds
-                # 3. We got no response at all
+                # 2. We got no response at all (proxy/network failure)
+                # 3. We got response but no price available
                 if price_data and price_data.get('success') and not price_data.get('lowest_price'):
-                    logger.info(
-                        f"🔄 Steam API returned success but no price data for {safe_log_name(market_hash_name)} - trying fallback")
-                    should_try_fallback = True
-                elif status_code == 429:
-                    logger.info(
-                        f"🔄 Rate limit hit for {safe_log_name(market_hash_name)} - trying fallback instead of waiting")
                     should_try_fallback = True
                 elif not price_data:
-                    logger.info(
-                        f"🔄 No response from Steam API for {safe_log_name(market_hash_name)} - trying fallback")
+                    should_try_fallback = True
+                else:
                     should_try_fallback = True
 
-                if should_try_fallback:
+                if should_try_fallback and not self.no_fallback:
                     fallback_result = await self._try_fallback_price(skin, variant, stattrak)
                     if fallback_result:
                         # Log fallback success
@@ -1214,18 +1191,11 @@ class PriceCollector:
                         "Process interrupted by user - saving current progress...")
                     self.save_database()
                     logger.info("Progress saved. Safe to exit.")
-                    # Run cleanup before exit
-                    self.run_cleanup()
-                    # Run cleanup before exit
-                    self.run_cleanup()
                     break
                 except Exception as e:
                     logger.error(f"Error processing batch: {e}")
 
         logger.info("🎉 Missing-only price collection completed!")
-
-        # Run cleanup to remove invalid variants
-        self.run_cleanup()
 
     async def _process_skins_in_order(self, skins_with_dates, start_index, limit=None, resume=True):
         """Collect prices for all skins starting from newest"""
@@ -1404,9 +1374,6 @@ class PriceCollector:
         logger.info("Price collection completed!")
         self.print_progress()
 
-        # Run cleanup to remove invalid variants
-        self.run_cleanup()
-
 
 async def main():
     """Main function to run price collection"""
@@ -1427,6 +1394,8 @@ async def main():
                         help='Enable detailed debug output including API endpoints')
     parser.add_argument('--noproxy', action='store_true',
                         help='Disable proxy usage (use direct connection to Steam API)')
+    parser.add_argument('--no-fallback', action='store_true',
+                        help='Disable fallback scraping (Steam API only)')
 
     args = parser.parse_args()
 
@@ -1434,7 +1403,8 @@ async def main():
         ignore_stattrak=args.ignore_stattrak,
         missing_only=args.missing_only,
         debug=args.debug,
-        noproxy=args.noproxy
+        noproxy=args.noproxy,
+        no_fallback=args.no_fallback
     )
 
     # Set up graceful shutdown handler

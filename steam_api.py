@@ -18,15 +18,16 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Set up dedicated logger for success-only responses
+# Set up dedicated logger for success-only responses (overwrite mode for clean logs)
 success_only_logger = logging.getLogger('success_only')
-success_only_handler = logging.FileHandler(
-    'success_only_responses.log', encoding='utf-8')
-success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
-success_only_handler.setFormatter(success_only_formatter)
-success_only_logger.addHandler(success_only_handler)
-success_only_logger.setLevel(logging.INFO)
-success_only_logger.propagate = False  # Don't send to parent loggers
+if not success_only_logger.handlers:  # Only add handler if it doesn't exist
+    success_only_handler = logging.FileHandler(
+        'success_only_responses.log', mode='w', encoding='utf-8')  # Use overwrite mode
+    success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
+    success_only_handler.setFormatter(success_only_formatter)
+    success_only_logger.addHandler(success_only_handler)
+    success_only_logger.setLevel(logging.INFO)
+    success_only_logger.propagate = False  # Don't send to parent loggers
 
 
 class SteamMarketAPIClient:
@@ -298,8 +299,17 @@ class SteamMarketAPIClient:
             "market_hash_name": market_hash_name
         }
 
+        # Construct the full API endpoint URL for detailed logging
+        import urllib.parse
+        query_string = urllib.parse.urlencode(params)
+        full_url = f"{self.base_url}?{query_string}"
+
         try:
             data, wait_time = await self._rate_limited_request(self.base_url, params)
+
+            # Log the API request and response details for debugging
+            logger.info(f"🌐 API REQUEST: {full_url}")
+            logger.info(f"🔄 API RESPONSE: {data}")
 
             if data and data.get("success"):
                 # Check if we only got {"success": true} without actual price data
@@ -337,10 +347,14 @@ class SteamMarketAPIClient:
                 return data, wait_time
             else:
                 logger.warning("No valid price data for %s", market_hash_name)
+                logger.info(f"🌐 API REQUEST: {full_url}")
+                logger.info(f"🔄 API RESPONSE: {data}")
                 return None, wait_time
 
         except (aiohttp.ClientError, ConnectionError, ValueError) as e:
             logger.error("Failed to get price for %s: %s", market_hash_name, e)
+            logger.info(f"🌐 API REQUEST: {full_url}")
+            logger.info(f"❌ API ERROR: {str(e)}")
             return None, 0.0
 
     async def get_multiple_prices(self, market_hash_names: List[str], currency: int = 1) -> Dict[str, Dict]:
