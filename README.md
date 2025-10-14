@@ -11,10 +11,10 @@ The CS2 skins database contains:
 - **13,610 estimated API calls** for complete price collection (Normal + StatTrak)
 - **6,805 estimated API calls** for Normal variants only
 
-### Processing Time Estimates (at 20 calls/minute rate limit)
+### Processing Time Estimates (at 19 calls/minute rate limit)
 
-- **Full collection (Normal + StatTrak)**: ~11.3 hours
-- **Normal variants only**: ~5.7 hours (use `--ignore-stattrak`)
+- **Full collection (Normal + StatTrak)**: ~11.9 hours
+- **Normal variants only**: ~6.0 hours (use `--ignore-stattrak`)
 
 ### Top 10 Weapons by Skin Count
 
@@ -191,7 +191,7 @@ python proxy_test.py add proxy.example.com 8080 --username user --password pass
 
 ### Steam API Configuration
 - `STEAM_MARKET_API_URL`: Steam Market API endpoint (default: Steam's official endpoint)
-- `STEAM_API_RATE_LIMIT`: Max requests per window (default: 20)
+- `STEAM_API_RATE_LIMIT`: Max requests per window (default: 19)
 - `STEAM_API_RATE_WINDOW`: Time window in seconds (default: 60)
 
 ### Proxy Configuration

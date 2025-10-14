@@ -7,8 +7,8 @@ Analyzes the skins database and generates detailed statistics in markdown format
 import json
 import os
 from datetime import datetime
-from collections import defaultdict, Counter
-from typing import Dict, List, Any, Optional
+from collections import Counter
+from typing import Dict, Any
 import sys
 
 

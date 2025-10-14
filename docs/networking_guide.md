@@ -221,7 +221,7 @@ HTTP_RETRY_BACKOFF_MAX=120               # Longer maximum backoff
 ## Performance Benchmarks
 
 ### Typical Performance (with proxies)
-- **Collection Rate**: 15-20 items per minute
+- **Collection Rate**: 15-19 items per minute
 - **Success Rate**: 95-98%
 - **Average Response Time**: 2-5 seconds
 - **Rate Limit Hits**: <1% of requests

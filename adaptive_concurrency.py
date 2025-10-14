@@ -48,7 +48,7 @@ class PerformanceMetrics:
 class AdaptiveConcurrencyController:
     """Dynamically adjusts concurrency based on performance metrics"""
 
-    def __init__(self, initial_concurrency: int = 20, min_concurrency: int = 3, max_concurrency: int = 50):
+    def __init__(self, initial_concurrency: int = 19, min_concurrency: int = 3, max_concurrency: int = 50):
         self.current_concurrency = initial_concurrency
         self.min_concurrency = min_concurrency
         self.max_concurrency = max_concurrency

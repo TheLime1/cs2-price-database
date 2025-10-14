@@ -292,5 +292,5 @@ The system validates:
 
 - Each price update requires 2 API calls (normal + StatTrak)
 - Total API calls for full update: ~13,610 requests
-- Estimated time at 20 calls/minute: ~11.3 hours
-- Use `--ignore-stattrak` to halve the time: ~5.7 hours
+- Estimated time at 19 calls/minute: ~12.0 hours
+- Use `--ignore-stattrak` to halve the time: ~6.0 hours

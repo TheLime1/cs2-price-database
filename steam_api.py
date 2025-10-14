@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import logging
 import os
+import urllib.parse
 from dotenv import load_dotenv
 import time
 from proxy_manager import proxy_manager
@@ -22,7 +23,6 @@ logger = logging.getLogger(__name__)
 success_only_logger = logging.getLogger('success_only')
 if not success_only_logger.handlers:  # Only add handler if it doesn't exist
     # Ensure logs directory exists
-    import os
     log_dir = os.getenv("LOG_DIR", "logs")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -43,7 +43,7 @@ class SteamMarketAPIClient:
     def __init__(self):
         self.base_url = os.getenv(
             "STEAM_MARKET_API_URL", "https://steamcommunity.com/market/priceoverview/")
-        self.rate_limit = int(os.getenv("STEAM_API_RATE_LIMIT", "20"))
+        self.rate_limit = int(os.getenv("STEAM_API_RATE_LIMIT", "19"))
         self.rate_window = int(os.getenv("STEAM_API_RATE_WINDOW", "60"))
         self.session: Optional[aiohttp.ClientSession] = None
         self.cache: Dict[str, Dict] = {}
@@ -307,7 +307,6 @@ class SteamMarketAPIClient:
         }
 
         # Construct the full API endpoint URL for detailed logging
-        import urllib.parse
         query_string = urllib.parse.urlencode(params)
         full_url = f"{self.base_url}?{query_string}"
 
@@ -322,7 +321,6 @@ class SteamMarketAPIClient:
                 # Check if we only got {"success": true} without actual price data
                 if len(data) == 1 and "success" in data and data["success"] is True:
                     # Construct the full API endpoint URL for debugging
-                    import urllib.parse
                     query_string = urllib.parse.urlencode(params)
                     full_url = f"{self.base_url}?{query_string}"
 
@@ -427,35 +425,3 @@ class SteamMarketAPIClient:
 
 # Global client instance
 steam_client = SteamMarketAPIClient()
-
-
-async def get_steam_prices(market_hash_names: List[str], currency: int = 3) -> Dict[str, Dict]:
-    """
-    Convenience function to get Steam Market prices with rate limiting
-
-    Args:
-        market_hash_names: List of Steam market hash names
-        currency: Currency code (3 = EUR, 1 = USD, etc.)
-
-    Returns:
-        Dictionary mapping hash names to price data
-    """
-    async with steam_client:
-        return await steam_client.get_multiple_prices(market_hash_names, currency)
-
-
-async def get_steam_price(market_hash_name: str, currency: int = 3) -> Optional[Dict]:
-    """
-    Convenience function to get a single Steam Market price
-
-    Args:
-        market_hash_name: Steam market hash name
-        currency: Currency code
-
-    Returns:
-        Price data dictionary or None if not found
-    """
-    steam_client = SteamMarketAPIClient()
-    async with steam_client:
-        price_data, _ = await steam_client.get_item_price(market_hash_name, currency)
-        return price_data

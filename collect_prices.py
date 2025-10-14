@@ -10,6 +10,7 @@ from optimized_fallback_scraper import OptimizedCSGODatabaseScraper
 from summary_logger import get_summary_logger
 import json
 import asyncio
+import argparse
 import logging
 import time
 from datetime import datetime, timedelta
@@ -1364,9 +1365,8 @@ class PriceCollector:
                 try:
                     # Create tasks for all variants across multiple skins
                     all_tasks = []
-                    skin_indices = []
 
-                    for j, (skin, intro_date) in enumerate(skin_batch):
+                    for j, (skin, _) in enumerate(skin_batch):
                         actual_index = start_index + batch_start + j
                         variants = skin.get('variants', [])
 
@@ -1381,7 +1381,7 @@ class PriceCollector:
                                     f"Failed to update availability for {skin['full_name']}: {e}")
 
                         # Create tasks for this skin's variants
-                        for variant_idx, variant in enumerate(variants):
+                        for _, variant in enumerate(variants):
                             # Create tasks based on missing_only logic
                             if self.missing_only:
                                 normal_has_price = variant.get('prices', {}).get(
@@ -1495,8 +1495,6 @@ class PriceCollector:
 
 async def main():
     """Main function to run price collection"""
-    import argparse
-    import signal
 
     parser = argparse.ArgumentParser(
         description='Collect Steam Market prices for CS2 skins')

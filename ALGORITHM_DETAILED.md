@@ -191,7 +191,7 @@ flowchart TD
    - Realistic User-Agent: "CS2-TradeUp-Scanner/1.0"
 
 2. **Rate Limiting Implementation**
-   - Sliding window algorithm: 20 requests per 60-second window
+   - Sliding window algorithm: 19 requests per 60-second window
    - Request timestamp tracking for rate calculation
    - Automatic wait time calculation when approaching limits
    - Option to disable rate limiting (unlimited mode)
@@ -658,8 +658,8 @@ def setup_signal_handlers():
 - **webdriver-manager**: Automatic ChromeDriver management
 
 ### Performance Characteristics
-- **Processing Speed**: ~11.3 hours for complete collection (Normal + StatTrak)
-- **Rate Limiting**: 20 requests per 60-second window (Steam API limit)
+- **Processing Speed**: ~11.9 hours for complete collection (Normal + StatTrak)
+- **Rate Limiting**: 19 requests per 60-second window (Steam API limit)
 - **Concurrency**: Up to 50 concurrent requests with proxy rotation
 - **Memory Usage**: ~100MB base + ~50MB per concurrent WebDriver instance
 - **Success Rate**: 95%+ with fallback scraping enabled
@@ -668,7 +668,7 @@ def setup_signal_handlers():
 ```env
 # Steam API Configuration
 STEAM_MARKET_API_URL=https://steamcommunity.com/market/priceoverview/
-STEAM_API_RATE_LIMIT=20
+STEAM_API_RATE_LIMIT=19
 STEAM_API_RATE_WINDOW=60
 
 # Proxy Configuration  

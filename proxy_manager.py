@@ -8,7 +8,7 @@ import asyncio
 import logging
 import random
 import time
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import os
@@ -608,7 +608,7 @@ class ProxyManager:
 
         # Test all proxies concurrently
         tasks = [self.test_proxy(proxy) for proxy in self.proxies]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         healthy_count = sum(1 for proxy in self.proxies if proxy.is_healthy)
         logger.info(

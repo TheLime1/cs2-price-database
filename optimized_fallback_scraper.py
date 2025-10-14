@@ -7,7 +7,7 @@ import asyncio
 import time
 import logging
 import re
-from typing import Dict, Optional, List, Tuple, Any
+from typing import Dict, Optional, List, Any
 from dataclasses import dataclass
 from queue import Queue
 import threading
@@ -16,11 +16,21 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 
 logger = logging.getLogger(__name__)
+
+# Constants for wear conditions
+FACTORY_NEW = "Factory New"
+MINIMAL_WEAR = "Minimal Wear"
+FIELD_TESTED = "Field-Tested"
+WELL_WORN = "Well-Worn"
+BATTLE_SCARRED = "Battle-Scarred"
+
+# Test constants
+TEST_URL = "https://www.csgodatabase.com/skins/ak-47-fuel-injector/"
+TEST_SKIN_NAME = "AK-47 Fuel Injector"
 
 
 @dataclass
@@ -46,7 +56,7 @@ class ScrapeResult:
 class WebDriverPool:
     """Pool of WebDriver instances for concurrent scraping"""
 
-    def __init__(self, pool_size: int = 3, proxies: List[str] = None, headless: bool = True):
+    def __init__(self, pool_size: int = 3, proxies: Optional[List[str]] = None, headless: bool = True):
         self.pool_size = pool_size
         self.proxies = proxies or []
         self.headless = headless
@@ -140,7 +150,7 @@ class WebDriverPool:
         """Get an available driver from the pool"""
         try:
             return self.driver_queue.get_nowait()
-        except:
+        except Exception:
             return None
 
     def return_driver(self, driver: webdriver.Chrome):
@@ -166,7 +176,7 @@ class WebDriverPool:
 class OptimizedCSGODatabaseScraper:
     """Optimized scraper with driver pool and queue system"""
 
-    def __init__(self, pool_size: int = 3, proxies: List[str] = None, headless: bool = True):
+    def __init__(self, pool_size: int = 3, proxies: Optional[List[str]] = None, headless: bool = True):
         self.driver_pool = WebDriverPool(pool_size, proxies, headless)
         self.request_queue = asyncio.Queue()
         self.result_cache = {}
@@ -297,9 +307,9 @@ class OptimizedCSGODatabaseScraper:
 
                 wear_condition = None
                 if "factory new" in header_lower:
-                    wear_condition = "Factory New"
+                    wear_condition = FACTORY_NEW
                 elif "minimal wear" in header_lower:
-                    wear_condition = "Minimal Wear"
+                    wear_condition = MINIMAL_WEAR
                 elif "field-tested" in header_lower or "field tested" in header_lower:
                     wear_condition = "Field-Tested"
                 elif "well-worn" in header_lower or "well worn" in header_lower:
@@ -321,8 +331,8 @@ class OptimizedCSGODatabaseScraper:
                 try:
                     cells = row.find_elements(By.CSS_SELECTOR, "td, th")
                     if cells:
-                        first_cell_html = cells[0].get_attribute(
-                            "innerHTML").lower()
+                        first_cell_html = (cells[0].get_attribute(
+                            "innerHTML") or "").lower()
                         first_cell_text = cells[0].text.strip().lower()
 
                         if 'steam' in first_cell_html or 'steam' in first_cell_text:
@@ -349,7 +359,7 @@ class OptimizedCSGODatabaseScraper:
 
             # Define all possible wear conditions
             all_wear_conditions = [
-                "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
+                FACTORY_NEW, MINIMAL_WEAR, FIELD_TESTED, WELL_WORN, BATTLE_SCARRED]
 
             # Process available columns
             for wear_key, col_index in column_mapping.items():
@@ -397,7 +407,7 @@ class OptimizedCSGODatabaseScraper:
             logger.error(f"❌ Error scraping {skin_name}: {e}")
             # Return empty availability data on error
             all_wear_conditions = [
-                "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
+                FACTORY_NEW, MINIMAL_WEAR, FIELD_TESTED, WELL_WORN, BATTLE_SCARRED]
             return {
                 'prices': {},
                 'availability': {wear: False for wear in all_wear_conditions},
@@ -629,74 +639,3 @@ class OptimizedCSGODatabaseScraper:
             'stattrak_availability': dict.fromkeys(all_wear_conditions, False),
             'listings': {}
         }
-
-# Test function
-
-
-async def test_optimized_scraper():
-    """Test the optimized scraper with multiple concurrent requests"""
-
-    # Example proxies (replace with real ones)
-    proxies = [
-        # "http://proxy1:port",
-        # "http://proxy2:port",
-        # "http://proxy3:port"
-    ]
-
-    async with OptimizedCSGODatabaseScraper(pool_size=3, proxies=proxies, headless=False) as scraper:
-        # Test multiple requests concurrently
-        tasks = []
-
-        # AK-47 Fuel Injector
-        tasks.append(scraper.get_price(
-            "https://www.csgodatabase.com/skins/ak-47-fuel-injector/",
-            "AK-47 Fuel Injector",
-            "Factory New",
-            stattrak=False
-        ))
-
-        tasks.append(scraper.get_price(
-            "https://www.csgodatabase.com/skins/ak-47-fuel-injector/",
-            "AK-47 Fuel Injector",
-            "Factory New",
-            stattrak=True
-        ))
-
-        tasks.append(scraper.get_price(
-            "https://www.csgodatabase.com/skins/ak-47-fuel-injector/",
-            "AK-47 Fuel Injector",
-            "Minimal Wear",
-            stattrak=False
-        ))
-
-        # Execute all requests concurrently
-        print("🚀 Starting concurrent price requests...")
-        start_time = time.time()
-
-        results = await asyncio.gather(*tasks)
-
-        end_time = time.time()
-        print(f"⏱️ Total time: {end_time - start_time:.2f} seconds")
-
-        # Display results
-        test_cases = [
-            ("AK-47 Fuel Injector Factory New", False),
-            ("AK-47 Fuel Injector Factory New", True),
-            ("AK-47 Fuel Injector Minimal Wear", False)
-        ]
-
-        for i, (name, is_stattrak) in enumerate(test_cases):
-            price = results[i]
-            variant = "StatTrak™" if is_stattrak else "Normal"
-            if price:
-                print(f"✅ {name} ({variant}): ${price:.2f}")
-            else:
-                print(f"❌ {name} ({variant}): No price")
-
-if __name__ == "__main__":
-    # Set up logging
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s | %(levelname)s | %(message)s')
-
-    # Run test
-    asyncio.run(test_optimized_scraper())
