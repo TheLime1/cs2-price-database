@@ -21,8 +21,15 @@ logger = logging.getLogger(__name__)
 # Set up dedicated logger for success-only responses (overwrite mode for clean logs)
 success_only_logger = logging.getLogger('success_only')
 if not success_only_logger.handlers:  # Only add handler if it doesn't exist
+    # Ensure logs directory exists
+    import os
+    log_dir = os.getenv("LOG_DIR", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+
+    success_only_log_file = os.path.join(log_dir, os.getenv(
+        "SUCCESS_ONLY_LOG_FILE", "success_only_responses.log"))
     success_only_handler = logging.FileHandler(
-        'success_only_responses.log', mode='w', encoding='utf-8')  # Use overwrite mode
+        success_only_log_file, mode='w', encoding='utf-8')  # Use overwrite mode
     success_only_formatter = logging.Formatter('%(asctime)s | %(message)s')
     success_only_handler.setFormatter(success_only_formatter)
     success_only_logger.addHandler(success_only_handler)

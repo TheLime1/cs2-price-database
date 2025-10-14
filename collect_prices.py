@@ -31,6 +31,9 @@ SUCCESS_ONLY_LOG_FILE = os.getenv(
     "SUCCESS_ONLY_LOG_FILE", "success_only_responses.log")
 API_RATE_LOG_FILE = os.getenv("API_RATE_LOG_FILE", "api_rate_test.log")
 
+# Constants
+SUMMARY_REPORT_MESSAGE = "📊 Summary report saved to logs/summary.txt"
+
 # Ensure log directory exists
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -390,6 +393,8 @@ class PriceCollector:
         with open(self.checkpoint_path, 'w', encoding='utf-8') as f:
             json.dump(self.checkpoint, f, indent=2)
 
+        # Track checkpoint saves in summary logger
+        self.summary_logger.log_checkpoint_save()
         logger.debug("Checkpoint saved")
 
     def save_database(self):
@@ -1156,6 +1161,10 @@ class PriceCollector:
         """Collect prices for all skins starting from newest"""
         logger.info("Starting price collection process")
 
+        # Set collection mode in summary logger
+        collection_mode = "missing-only" if self.missing_only else "sequential"
+        self.summary_logger.set_collection_mode(collection_mode, resume)
+
         if self.ignore_stattrak:
             logger.info("StatTrak variants will be ignored")
 
@@ -1439,6 +1448,11 @@ class PriceCollector:
                     self.stats['processed_variants'] += len(all_tasks)
                     self.stats['processed_skins'] += len(skin_batch)
 
+                    # Update summary logger stats
+                    self.summary_logger.stats.total_skins_processed = self.stats['processed_skins']
+                    self.summary_logger.stats.total_variants_processed = self.stats[
+                        'processed_variants']
+
                     # Update checkpoint to last skin in batch
                     if skin_batch:
                         last_skin = skin_batch[-1][0]
@@ -1525,9 +1539,11 @@ async def main():
     # Set up graceful shutdown handler
     def signal_handler(signum, frame):
         logger.info("🛑 Received shutdown signal. Generating summary report...")
-        # Generate final summary report
-        collector.summary_logger.generate_summary_report()
-        logger.info("📊 Summary report saved to logs/summary.txt")
+        # Set interruption flag and save summary
+        collector.summary_logger.set_interruption(
+            interrupted_by_user=True, graceful=True)
+        collector.summary_logger.save_summary()
+        logger.info(SUMMARY_REPORT_MESSAGE)
         exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -1540,19 +1556,23 @@ async def main():
         )
 
         # Generate final summary report on normal completion
-        collector.summary_logger.generate_summary_report()
+        collector.summary_logger.save_summary()
         logger.info(
             "✅ Collection completed. Summary report saved to logs/summary.txt")
 
     except KeyboardInterrupt:
         logger.info(
             "🛑 Collection interrupted by user. Generating summary report...")
-        collector.summary_logger.generate_summary_report()
-        logger.info("📊 Summary report saved to logs/summary.txt")
+        collector.summary_logger.set_interruption(
+            interrupted_by_user=True, graceful=True)
+        collector.summary_logger.save_summary()
+        logger.info(SUMMARY_REPORT_MESSAGE)
     except Exception as e:
         logger.error(f"❌ Unexpected error during collection: {e}")
-        collector.summary_logger.generate_summary_report()
-        logger.info("📊 Summary report saved to logs/summary.txt")
+        collector.summary_logger.set_interruption(
+            interrupted_by_user=False, graceful=False)
+        collector.summary_logger.save_summary()
+        logger.info(SUMMARY_REPORT_MESSAGE)
         raise
 
 
