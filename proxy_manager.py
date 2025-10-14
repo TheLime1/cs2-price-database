@@ -68,19 +68,26 @@ class ProxyManager:
         self.test_url = "https://httpbin.org/ip"
         self.timeout = 10
         self.use_proxies = False
+        self.use_direct_ip = False
         self._proxy_fetch_task = None
 
-        # Enhanced concurrency control - 50 concurrent requests
+        # Enhanced concurrency control
         self.max_concurrent_requests = int(
-            os.getenv("MAX_CONCURRENT_REQUESTS", "50"))
+            os.getenv("MAX_CONCURRENT_REQUESTS", "19"))
         self._request_semaphore = None
 
-        # Rate limiting configuration
-        self.max_requests_per_minute = 19  # Steam API limit
-        self.rate_limit_window = 60.0  # 1 minute in seconds
-        self.rate_limit_backoff_time = 61.0  # 61 seconds backoff
-        # Remove proxy after 5 consecutive rate limits
+        # Rate limiting configuration (19 req/min for ALL connections)
+        self.max_requests_per_minute = int(
+            os.getenv("STEAM_API_RATE_LIMIT", "19"))
+        self.rate_limit_window = float(
+            os.getenv("STEAM_API_RATE_WINDOW", "60"))
+        self.rate_limit_backoff_time = float(
+            os.getenv("STEAM_API_RATE_LIMIT_BACKOFF", "65"))
         self.max_consecutive_rate_limits = 5
+
+        # Direct IP rate limiting (shares same limit pool as proxies)
+        self.direct_ip_requests = []  # Timestamp tracking for direct IP
+        self.last_direct_ip_request = None
 
         # Load proxy configuration
         self._load_proxy_config()
@@ -90,8 +97,10 @@ class ProxyManager:
 
     def _load_proxy_config(self):
         """Load proxy configuration from environment variables and GitHub source"""
-        # Check if proxies are enabled
+        # Check if proxies and direct IP are enabled
         self.use_proxies = os.getenv("USE_PROXIES", "false").lower() == "true"
+        self.use_direct_ip = os.getenv(
+            "USE_DIRECT_IP", "false").lower() == "true"
 
         if not self.use_proxies:
             logger.info("Proxy usage disabled")
@@ -188,8 +197,8 @@ class ProxyManager:
                             # Note: Health testing can be enabled with environment variable
                             if os.getenv("ENABLE_PROXY_HEALTH_CHECK", "false").lower() == "true":
                                 logger.info(
-                                    "Testing proxies one by one to filter out dead ones...")
-                                await self._test_and_filter_proxies_sequential()
+                                    "🔍 Starting asynchronous proxy health testing...")
+                                await self._test_and_filter_proxies_async()
                             else:
                                 logger.info(
                                     "Health testing disabled for faster startup (set ENABLE_PROXY_HEALTH_CHECK=true to enable)")
@@ -217,59 +226,127 @@ class ProxyManager:
                 logger.warning("No proxies available, proxy support disabled")
                 self.use_proxies = False
 
-    async def _test_and_filter_proxies_sequential(self):
-        """Test proxies one by one and remove dead ones"""
+    async def _test_and_filter_proxies_async(self):
+        """Test proxies asynchronously and allow early start when healthy proxies are found"""
         if not self.proxies:
             return
 
-        logger.info(f"Testing {len(self.proxies)} proxies one by one...")
-        working_proxies = []
         total_proxies = len(self.proxies)
+        logger.info(
+            f"🔍 Starting asynchronous health check for {total_proxies} proxies...")
+        logger.info(
+            "⚡ Will start scraping as soon as healthy proxies are found!")
 
-        for i, proxy in enumerate(self.proxies, 1):
-            # Show progress every 50 proxies
-            if i % 50 == 0 or i == total_proxies:
-                logger.info(
-                    f"Testing proxy {i}/{total_proxies}: {proxy.host}:{proxy.port}")
+        # Create shared tracking variables
+        self.healthy_proxy_count = 0
+        self.proxy_testing_complete = False
 
-            is_working = await self._test_proxy_health(proxy)
-            if is_working:
-                working_proxies.append(proxy)
-                proxy.is_healthy = True
-                proxy.failure_count = 0
-                proxy.success_count += 1
-            else:
-                proxy.is_healthy = False
-                proxy.failure_count += 1
+        # Start background proxy testing
+        self._background_test_task = asyncio.create_task(
+            self._test_all_proxies_background())
 
-            # Small delay to avoid overwhelming the test endpoint
-            await asyncio.sleep(0.1)
+        # Wait for at least a few healthy proxies before returning
+        # At least 1, max 5, or 5% of total
+        min_healthy_proxies = min(5, max(1, total_proxies // 20))
+        logger.info(
+            f"⏳ Waiting for at least {min_healthy_proxies} healthy proxies before starting...")
 
-        # Update the proxy list with only working proxies
+        # Poll until we have enough healthy proxies or timeout
+        timeout_seconds = 30  # Max 30 seconds wait
+        start_time = time.time()
+
+        while (self.healthy_proxy_count < min_healthy_proxies and
+               not self.proxy_testing_complete and
+               time.time() - start_time < timeout_seconds):
+            await asyncio.sleep(0.5)
+
+        if self.healthy_proxy_count > 0:
+            logger.info(
+                f"🚀 Found {self.healthy_proxy_count} healthy proxies - starting scraping!")
+            logger.info(f"📊 Proxy testing continues in background...")
+        else:
+            logger.warning(
+                "⚠️ No healthy proxies found yet, but continuing...")
+
+    async def _test_all_proxies_background(self):
+        """Background task to test all proxies asynchronously"""
+        semaphore = asyncio.Semaphore(10)  # Test up to 10 proxies concurrently
+
+        async def test_single_proxy(proxy, index):
+            async with semaphore:
+                try:
+                    is_working = await self._test_proxy_health(proxy)
+
+                    if is_working:
+                        proxy.is_healthy = True
+                        proxy.failure_count = 0
+                        proxy.success_count += 1
+                        self.healthy_proxy_count += 1
+                        logger.info(
+                            f"✅ HEALTHY #{self.healthy_proxy_count}: {proxy.host}:{proxy.port} ({index}/{len(self.proxies)})")
+                    else:
+                        proxy.is_healthy = False
+                        proxy.failure_count += 1
+                        logger.debug(
+                            f"❌ FAILED: {proxy.host}:{proxy.port} ({index}/{len(self.proxies)})")
+
+                    # Log progress every 50 proxies
+                    if index % 50 == 0:
+                        logger.info(
+                            f"📊 Progress: {index}/{len(self.proxies)} tested, {self.healthy_proxy_count} healthy")
+
+                except Exception as e:
+                    proxy.is_healthy = False
+                    proxy.failure_count += 1
+                    logger.debug(
+                        f"❌ Proxy {index}/{len(self.proxies)}: {proxy.host}:{proxy.port} - ERROR: {e}")
+
+        # Test all proxies concurrently
+        tasks = [test_single_proxy(proxy, i+1)
+                 for i, proxy in enumerate(self.proxies)]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Remove unhealthy proxies
+        working_proxies = [p for p in self.proxies if p.is_healthy]
         removed_count = len(self.proxies) - len(working_proxies)
         self.proxies = working_proxies
 
-        if removed_count > 0:
-            logger.info(
-                f"Filtered out {removed_count} dead proxies, {len(self.proxies)} working proxies remain")
-        else:
-            logger.info(f"All {len(self.proxies)} proxies are working")
+        self.proxy_testing_complete = True
+
+        logger.info(f"🎯 Proxy health check complete!")
+        logger.info(
+            f"📊 Final results: {len(working_proxies)} healthy, {removed_count} removed")
+
+        if not self.proxies:
+            logger.warning("⚠️ No working proxies available after filtering!")
 
     async def _test_proxy_health(self, proxy: ProxyInfo) -> bool:
-        """Test if a single proxy is working"""
+        """Test if a single proxy is working with Steam API"""
         try:
             proxy_url = f"http://{proxy.host}:{proxy.port}"
             connector = aiohttp.TCPConnector()
-            timeout = aiohttp.ClientTimeout(total=3)  # Reduced to 3 seconds
+            timeout = aiohttp.ClientTimeout(
+                total=10)  # 10 seconds for Steam API
 
             async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-                # Use a simple HTTP endpoint to test proxy
-                test_url = "http://httpbin.org/ip"
+                # Use Steam API health check endpoint from environment
+                test_url = os.getenv("PROXY_HEALTH_CHECK_URL",
+                                     "https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=AK-47")
+
                 async with session.get(test_url, proxy=proxy_url) as response:
-                    if response.status == 200:
+                    # Steam API returns 200 for successful requests (even if no price data)
+                    # Status 429 means rate limited but proxy is working
+                    if response.status in [200, 429]:
+                        logger.debug(
+                            f"✅ Proxy {proxy.host}:{proxy.port} healthy (Steam API status: {response.status})")
                         return True
-            return False
-        except Exception:
+                    else:
+                        logger.debug(
+                            f"❌ Proxy {proxy.host}:{proxy.port} unhealthy (Steam API status: {response.status})")
+                        return False
+        except Exception as e:
+            logger.debug(
+                f"❌ Proxy {proxy.host}:{proxy.port} health check failed: {e}")
             return False
 
     def get_request_semaphore(self) -> asyncio.Semaphore:
@@ -342,6 +419,26 @@ class ProxyManager:
             self.current_proxy_index = 0
 
         return healthy_proxies[self.current_proxy_index]
+
+    def can_use_direct_ip(self) -> bool:
+        """Check if we can use direct IP (rate limit check)"""
+        if not self.use_direct_ip:
+            return False
+
+        now = time.time()
+        # Clean old requests outside the window
+        self.direct_ip_requests = [req_time for req_time in self.direct_ip_requests
+                                   if now - req_time < self.rate_limit_window]
+
+        # Check if we're under the rate limit
+        return len(self.direct_ip_requests) < self.max_requests_per_minute
+
+    def use_direct_ip_request(self):
+        """Record a direct IP request for rate limiting"""
+        if self.use_direct_ip:
+            now = time.time()
+            self.direct_ip_requests.append(now)
+            self.last_direct_ip_request = now
 
     def rotate_proxy(self):
         """Rotate to the next available proxy"""
