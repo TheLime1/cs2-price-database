@@ -246,19 +246,20 @@ class ProxyManager:
             self._test_all_proxies_background())
 
         # Wait for at least a few healthy proxies before returning
-        # At least 1, max 5, or 5% of total
-        min_healthy_proxies = min(5, max(1, total_proxies // 20))
+        # IMMEDIATE START: Don't wait at all - WebDrivers can work without proxies!
+        min_healthy_proxies = 0  # NO WAITING - START IMMEDIATELY
         logger.info(
-            f"⏳ Waiting for at least {min_healthy_proxies} healthy proxies before starting...")
+            f"🚀 IMMEDIATE START MODE: Starting right now! Proxies will be added as they become available...")
 
-        # Poll until we have enough healthy proxies or timeout
-        timeout_seconds = 30  # Max 30 seconds wait
+        # Just do a quick check if any are ready immediately
+        timeout_seconds = 2  # Only 2 seconds max wait
         start_time = time.time()
 
-        while (self.healthy_proxy_count < min_healthy_proxies and
+        while (self.healthy_proxy_count < 1 and
                not self.proxy_testing_complete and
                time.time() - start_time < timeout_seconds):
-            await asyncio.sleep(0.5)
+            # Check every 100ms for immediate response
+            await asyncio.sleep(0.1)
 
         if self.healthy_proxy_count > 0:
             logger.info(

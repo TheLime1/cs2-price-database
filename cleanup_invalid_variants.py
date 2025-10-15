@@ -1,6 +1,6 @@
 """
 Database Cleanup Script for CS2 Skins
-Removes variants that have 'success: True' but no price data (not tradeable/available on market)
+Removes variants that have 'success: True' but no price data OR 'success: False' (not tradeable/available on market)
 These are variants that exist in the database but are not actually available in the game
 """
 
@@ -66,6 +66,8 @@ class VariantCleaner:
         A variant is invalid if:
         - normal price has 'success': True but no 'usd' value or usd == 0
         - stattrak price has 'success': True but no 'usd' value or usd == 0
+        - normal price has 'success': False (variant doesn't exist)
+        - stattrak price has 'success': False (variant doesn't exist)
         """
         reasons = []
 
@@ -79,8 +81,8 @@ class VariantCleaner:
             normal = prices['normal']
             if 'raw_data' in normal:
                 raw = normal['raw_data']
-                # Has success: True but no price data
-                if raw.get('success') and not raw.get('lowest_price'):
+                # Has success: True but no price data OR success: False
+                if (raw.get('success') and not raw.get('lowest_price')) or raw.get('success') is False:
                     reasons.append('normal')
 
         # Check StatTrak variant
@@ -88,8 +90,8 @@ class VariantCleaner:
             stattrak = prices['stattrak']
             if 'raw_data' in stattrak:
                 raw = stattrak['raw_data']
-                # Has success: True but no price data
-                if raw.get('success') and not raw.get('lowest_price'):
+                # Has success: True but no price data OR success: False
+                if (raw.get('success') and not raw.get('lowest_price')) or raw.get('success') is False:
                     reasons.append('stattrak')
 
         # Remove the entire variant if BOTH normal and stattrak are invalid
@@ -105,8 +107,8 @@ class VariantCleaner:
             return False
 
         raw = price_data['raw_data']
-        # Has success: True but no price data
-        return raw.get('success') and not raw.get('lowest_price')
+        # Has success: True but no price data OR success: False
+        return (raw.get('success') and not raw.get('lowest_price')) or raw.get('success') is False
 
     def clean_database(self, dry_run: bool = False) -> Dict[str, int]:
         """
