@@ -396,13 +396,14 @@ class HighSpeedScraper:
 
         logger.info(
             f"🏥 Health check complete: {len(healthy_proxies)}/{len(proxies)} proxies healthy")
-        
+
         # Only log if we have few or no healthy proxies (to reduce spam)
         if len(healthy_proxies) == 0:
             logger.warning(f"⚠️ No healthy proxies found in this batch")
         elif len(healthy_proxies) < 3:
-            logger.warning(f"⚠️ Only {len(healthy_proxies)} healthy proxies found")
-        
+            logger.warning(
+                f"⚠️ Only {len(healthy_proxies)} healthy proxies found")
+
         return healthy_proxies
 
     async def _test_proxy_health(self, proxy: ProxyInfo) -> bool:
@@ -976,9 +977,7 @@ class HighSpeedScraper:
                             # Update the price data
                             db_variant['prices'][price_key].update({
                                 'usd': price_data['usd'],
-                                'last_updated': datetime.now().isoformat(),
-                                'scraped_from': 'csgodatabase_detail_page',
-                                'source': 'webdriver_scraper'
+                                'last_updated': datetime.now().isoformat()
                             })
 
                             # Also update EUR if available
@@ -1102,16 +1101,75 @@ class HighSpeedScraper:
 
         def signal_handler(signum, frame):
             logger.info(
-                f"🛑 Received signal {signum}, initiating graceful shutdown...")
-            asyncio.create_task(self._save_checkpoint_and_shutdown())
+                f"🛑 Received signal {signum}, initiating IMMEDIATE shutdown...")
+            asyncio.create_task(self._emergency_shutdown())
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         self.shutdown_handler_registered = True
 
+    async def _emergency_shutdown(self):
+        """Emergency shutdown - save database immediately and kill everything fast"""
+        logger.info(
+            "🚨 EMERGENCY SHUTDOWN - Saving database and terminating all workers...")
+
+        try:
+            # Set shutdown event immediately
+            self.shutdown_event.set()
+            self.running = False
+
+            # Save database immediately with priority
+            logger.info("💾 Emergency database save starting...")
+            await self._save_database_to_disk()
+            logger.info("✅ Emergency database save complete!")
+
+            # Cancel ALL background tasks aggressively
+            logger.info("🛑 Cancelling all background tasks...")
+            for task in self.background_tasks:
+                if not task.done():
+                    task.cancel()
+
+            # Force close WebDriver pool immediately
+            if hasattr(self, 'webdriver_pool') and self.webdriver_pool:
+                logger.info("🔌 Force closing WebDriver pool...")
+                try:
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, self.webdriver_pool.cleanup
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️ WebDriver cleanup error (ignored): {e}")
+
+            # Force close Steam client
+            if hasattr(self, 'steam_client') and self.steam_client:
+                try:
+                    await self.steam_client.__aexit__(None, None, None)
+                except Exception as e:
+                    logger.warning(
+                        f"⚠️ Steam client cleanup error (ignored): {e}")
+
+            logger.info(
+                "🚨 EMERGENCY SHUTDOWN COMPLETE - Database saved, all workers terminated!")
+
+        except Exception as e:
+            logger.error(f"❌ Error during emergency shutdown: {e}")
+        finally:
+            # Force exit if still running
+            import sys
+            logger.info("🔥 FORCE EXIT")
+            sys.exit(0)
+
     async def _save_checkpoint_and_shutdown(self):
-        """Save checkpoint and initiate shutdown"""
+        """Save checkpoint, database, and initiate shutdown"""
+        logger.info("💾 Saving database and checkpoint before shutdown...")
+
+        # Save database first
+        await self._save_database_to_disk()
+
+        # Then save checkpoint
         await self._save_fallback_checkpoint()
+
+        logger.info("✅ Database and checkpoint saved, shutting down...")
         self.shutdown_event.set()
 
     async def _save_fallback_checkpoint(self):
@@ -1384,6 +1442,9 @@ class HighSpeedScraper:
 
     async def _progress_reporter(self):
         """Report progress every 10 seconds with enhanced formatting and detailed metrics"""
+        logger.info(
+            "📊 Progress reporter started - will report every 10 seconds")
+
         while not self.shutdown_event.is_set():
             try:
                 await asyncio.sleep(10)  # Report every 10 seconds
@@ -1443,6 +1504,70 @@ class HighSpeedScraper:
             except Exception as e:
                 logger.error(f"Progress reporter error: {e}")
 
+    async def _database_saver_loop(self):
+        """Save database to disk every 10 seconds"""
+        logger.info("💾 Database saver started - will save every 10 seconds")
+
+        while not self.shutdown_event.is_set():
+            try:
+                await asyncio.sleep(10)  # Save every 10 seconds
+
+                if self.shutdown_event.is_set():
+                    break
+
+                await self._save_database_to_disk()
+
+            except asyncio.CancelledError:
+                raise  # Re-raise cancellation
+            except Exception as e:
+                logger.error(f"💾 Database saver error: {e}")
+
+    async def _save_database_to_disk(self):
+        """Save the current database to disk"""
+        try:
+            # Run the database saving in an executor to avoid blocking
+            await asyncio.get_event_loop().run_in_executor(None, self._sync_save_database)
+            logger.info("💾 Database saved to disk")
+        except Exception as e:
+            logger.error(f"❌ Error saving database to disk: {e}")
+
+    def _sync_save_database(self):
+        """Synchronous database save operation"""
+        database_path = "data/skins_database.json"
+
+        # Load current database
+        with open(database_path, 'r', encoding='utf-8') as f:
+            database = json.load(f)
+
+        # Update metadata
+        database['data_status']['last_price_update'] = datetime.now().isoformat()
+
+        # Save with atomic write (write to temp file first, then rename)
+        import uuid
+        temp_path = f"{database_path}.tmp.{uuid.uuid4().hex[:8]}"
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(database, f, indent=2, ensure_ascii=False)
+
+            # Atomic rename
+            if os.path.exists(database_path):
+                backup_path = f"{database_path}.bak"
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+                os.rename(database_path, backup_path)
+
+            os.rename(temp_path, database_path)
+
+            # Clean up backup after successful write
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+
+        except Exception as e:
+            # Clean up temp file if it exists
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise e
+
     async def start_scraping(self):
         """Start the high-speed scraping process with progress tracking"""
         logger.info("🚀 Starting high-speed scraping...")
@@ -1455,6 +1580,9 @@ class HighSpeedScraper:
 
         # Start progress reporter
         progress_task = asyncio.create_task(self._progress_reporter())
+
+        # Start database saver (saves every 10 seconds)
+        database_saver_task = asyncio.create_task(self._database_saver_loop())
 
         # NO WAITING - START IMMEDIATELY! WebDrivers are already stealing work!
         # await asyncio.sleep(5)  # REMOVED: Immediate startup as requested
@@ -1469,6 +1597,12 @@ class HighSpeedScraper:
         finally:
             # Cancel progress reporting
             progress_task.cancel()
+            database_saver_task.cancel()
+
+            # Save database one final time before shutdown
+            await self._save_database_to_disk()
+            logger.info("💾 Final database save complete")
+
             # Don't wait for cancellation - let it finish naturally
 
     async def shutdown(self):

@@ -604,7 +604,8 @@ ENVIRONMENT VARIABLES:
 
         # If shutdown was triggered, cancel the collection
         if shutdown_event.is_set():
-            logger.info("🛑 Shutdown signal received - cancelling collection...")
+            logger.info(
+                "🛑 Shutdown signal received - cancelling collection...")
             collection_task.cancel()
             try:
                 await collection_task
