@@ -164,13 +164,18 @@ class V2PriceCollector:
             return True
 
     def filter_missing_items(self, data: Dict, limit: Optional[int] = None) -> List[SkinItem]:
-        """Filter items that need price updates and convert to SkinItem objects"""
+        """Filter items that need price updates and convert to SkinItem objects (NEWEST FIRST)"""
         logger.info("Scanning database for missing prices...")
 
         missing_items = []
         processed_skins = 0
 
-        for skin_data in data.get('skins', []):
+        # Process skins in NEWEST FIRST order (reverse database order)
+        skins_list = list(data.get('skins', []))
+        logger.info(
+            f"🔄 Scanning {len(skins_list)} skins in NEWEST FIRST order")
+
+        for skin_data in reversed(skins_list):
             if limit and processed_skins >= limit:
                 break
 

@@ -252,8 +252,9 @@ class HighSpeedScraper:
         # Fetch headers from remote source
         await self._fetch_headers()
 
-        # Initialize proxy manager (using existing methods)
+        # Initialize proxy manager and ensure proxies are loaded
         self.proxy_manager._load_proxy_config()
+        await self.proxy_manager.ensure_proxies_loaded()
 
         # Start WebDrivers immediately (they start stealing from queue ASAP)
         await self._initialize_webdrivers()
@@ -802,7 +803,9 @@ class HighSpeedScraper:
             async with aiohttp.ClientSession() as session:
                 async with session.get(self.headers_url, timeout=30) as response:
                     if response.status == 200:
-                        headers_data = await response.json()
+                        # GitHub returns JSON as text/plain, so parse manually
+                        text_content = await response.text()
+                        headers_data = json.loads(text_content)
                         if isinstance(headers_data, list) and headers_data:
                             self.headers_pool = headers_data
                             self.last_headers_fetch = time.time()
@@ -1031,7 +1034,7 @@ class HighSpeedScraper:
                             f"Fallback: {self.fallback_queue.qsize()}")
 
     async def load_items_from_database(self, database_path: str):
-        """Load items from database and populate the queue"""
+        """Load items from database and populate the queue (NEWEST FIRST)"""
         logger.info(f"📂 Loading items from database: {database_path}")
 
         try:
@@ -1039,7 +1042,12 @@ class HighSpeedScraper:
                 data = json.load(f)
 
             items_loaded = 0
-            for skin_data in data.get('skins', []):
+            # REVERSE ORDER: Process newest skins first (they appear at end of database)
+            skins_list = list(data.get('skins', []))
+            logger.info(
+                f"🔄 Processing {len(skins_list)} skins in NEWEST FIRST order")
+
+            for skin_data in reversed(skins_list):
                 item = SkinItem(
                     id=skin_data['id'],
                     weapon=skin_data['weapon'],
@@ -1052,7 +1060,8 @@ class HighSpeedScraper:
                 self.main_queue.put(item)
                 items_loaded += 1
 
-            logger.info(f"✅ Loaded {items_loaded} items into scraping queue")
+            logger.info(
+                f"✅ Loaded {items_loaded} items into scraping queue (NEWEST FIRST)")
 
         except Exception as e:
             logger.error(f"❌ Error loading items from database: {e}")
@@ -1064,8 +1073,8 @@ class HighSpeedScraper:
 
         self.running = True
 
-        # Wait for initial workers to be ready
-        await asyncio.sleep(5)
+        # NO WAITING - START IMMEDIATELY! WebDrivers are already stealing work!
+        # await asyncio.sleep(5)  # REMOVED: Immediate startup as requested
 
         logger.info("⚡ High-speed scraping is now running!")
         logger.info(f"📊 Queue size: {self.main_queue.qsize()} items")
