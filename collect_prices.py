@@ -269,6 +269,20 @@ class V2PriceCollector:
                 for item in limited_items:
                     self.scraper.main_queue.put(item)
 
+                # Update the total_items count to reflect the actual limit
+                self.scraper.stats['total_items'] = len(limited_items)
+                logger.info(
+                    f"Queue adjusted to {len(limited_items)} items due to --limit {limit}")
+
+        # Set the total items count for completion tracking
+        if missing_only:
+            self.scraper.stats['total_items'] = len(missing_items)
+        elif not hasattr(self.scraper.stats, 'total_items') or not self.scraper.stats.get('total_items'):
+            self.scraper.stats['total_items'] = self.scraper.main_queue.qsize()
+
+        logger.info(
+            f"Total items to process: {self.scraper.stats['total_items']}")
+
         # Start the V2.0 high-speed scraping
         logger.info("Starting CS2 Price Collection System V2.0")
         await self.scraper.start_scraping()
@@ -289,10 +303,30 @@ class V2PriceCollector:
         logger.info(
             f"CS2 PRICE COLLECTION V2.0 COMPLETED in {duration.total_seconds():.2f} seconds!")
 
+        # Create a proper CollectionStats object for V2.0 system
+        from summary_logger import CollectionStats
+        collection_stats = CollectionStats(
+            env_variables={},
+            start_time=self.stats['start_time'],
+            end_time=self.stats['end_time'],
+            total_duration=duration.total_seconds(),
+            total_skins_processed=len(self.scraper.completed_items),
+            total_variants_processed=len(
+                self.scraper.completed_items) * 50,  # Estimate
+            steam_api_success_count=self.scraper.stats.get(
+                'proxy_successes', 0),
+            fallback_scraper_success_count=self.scraper.stats.get(
+                'webdriver_successes', 0),
+            total_success_count=len(self.scraper.completed_items),
+            steam_api_failure_count=self.scraper.stats.get(
+                'proxy_failures', 0),
+            fallback_scraper_failure_count=self.scraper.stats.get(
+                'webdriver_failures', 0),
+            total_failure_count=self.scraper.stats.get('items_failed', 0)
+        )
+
         # Save summary using correct method name
-        summary_logger.collection_mode = "V2.0-WORKER-STEALING"
-        summary_logger.stats = self.scraper.stats
-        summary_logger.duration = duration.total_seconds()
+        summary_logger.stats = collection_stats
         summary_logger.save_summary()
 
         logger.info(

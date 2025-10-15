@@ -264,8 +264,9 @@ class HighSpeedScraper:
         task2 = asyncio.create_task(self._worker_management_loop())
         task3 = asyncio.create_task(self._statistics_loop())
         task4 = asyncio.create_task(self._headers_refresh_loop())
+        task5 = asyncio.create_task(self._completion_monitor_loop())
 
-        self.background_tasks.extend([task1, task2, task3, task4])
+        self.background_tasks.extend([task1, task2, task3, task4, task5])
 
         self.stats['start_time'] = datetime.now()
         logger.info("✅ High-speed scraping system initialized")
@@ -294,7 +295,7 @@ class HighSpeedScraper:
             None, self.webdriver_pool.initialize
         )
 
-        # Create WebDriver workers
+        # Create WebDriver workers (compact logging)
         for i in range(self.webdriver_count):
             worker_id = f"webdriver_{i+1}"
             worker = Worker(
@@ -383,18 +384,23 @@ class HighSpeedScraper:
 
     async def _test_proxy_health(self, proxy: ProxyInfo) -> bool:
         """Test if a single proxy is healthy"""
+        session = None
         try:
-            async with self.steam_client:
-                # Use a simple test endpoint
-                test_url = "https://httpbin.org/ip"
-                async with self.steam_client.session.get(
-                    test_url,
-                    proxy=proxy.url,
-                    timeout=10
-                ) as response:
-                    return response.status == 200
+            # Create a temporary session for this test
+            timeout = aiohttp.ClientTimeout(total=10)
+            session = aiohttp.ClientSession(timeout=timeout)
+
+            # Use a simple test endpoint
+            test_url = "https://httpbin.org/ip"
+            async with session.get(test_url, proxy=proxy.url) as response:
+                return response.status == 200
+
         except Exception:
             return False
+        finally:
+            # Ensure session is properly closed
+            if session and not session.closed:
+                await session.close()
 
     def _add_proxy_worker(self, proxy: ProxyInfo):
         """Add a healthy proxy as a worker"""
@@ -482,30 +488,48 @@ class HighSpeedScraper:
         logger.info(
             f"⚡ Proxy worker {worker.id} READY - starting immediate work stealing")
 
+        loop_count = 0
         while not self.shutdown_event.is_set() and worker.id in self.workers:
             try:
+                loop_count += 1
+
                 if not worker.is_available:
+                    if loop_count % 100 == 0:  # Log every 100 iterations when not available
+                        logger.debug(
+                            f"🔄 Proxy worker {worker.id} waiting (status: {worker.status.value})")
                     await asyncio.sleep(0.1)  # Very brief availability check
                     continue
 
                 # Try to steal an item from the main queue
                 item = self._steal_from_main_queue(worker)
                 if not item:
+                    if loop_count % 1000 == 0:  # Log every 1000 iterations when no work
+                        logger.debug(
+                            f"🔄 Proxy worker {worker.id} no work available (checked {loop_count} times)")
                     await asyncio.sleep(0.1)  # Minimal pause - stay responsive
                     continue
 
+                # Reset loop count when we get work
+                loop_count = 0
+
                 # Process the item
+                logger.info(
+                    f"🔥 Proxy worker {worker.id} starting work on {item.id}")
                 success = await self._process_item_with_proxy(worker, item)
 
                 if success:
                     worker.success_count += 1
                     self.stats['proxy_successes'] += 1
                     self._mark_item_completed(item)
+                    logger.info(
+                        f"✅ Proxy worker {worker.id} completed {item.id}")
                 else:
                     worker.failure_count += 1
                     self.stats['proxy_failures'] += 1
                     # Delegate entire item to fallback queue
                     self._delegate_to_fallback(item)
+                    logger.warning(
+                        f"❌ Proxy worker {worker.id} failed {item.id}, sent to fallback")
 
                 worker.status = WorkerStatus.IDLE
                 worker.current_item = None
@@ -518,8 +542,7 @@ class HighSpeedScraper:
 
     async def _webdriver_worker_loop(self, worker: Worker):
         """Main loop for WebDriver workers - starts scraping immediately"""
-        logger.info(
-            f"🚀 WebDriver worker {worker.id} READY - starting immediate work stealing")
+        # No individual startup log - already logged in bulk
 
         while not self.shutdown_event.is_set() and worker.id in self.workers:
             try:
@@ -574,10 +597,12 @@ class HighSpeedScraper:
             worker.current_item = item
             worker.status = WorkerStatus.WORKING
 
-            logger.debug(f"📦 Worker {worker.id} stole item: {item.id}")
+            logger.info(
+                f"📦 Worker {worker.id} took item: {item.id} (Type: {worker.worker_type.value})")
             return item
 
         except Empty:
+            # No items available - this is normal
             return None
 
     def _steal_from_fallback_queue(self, worker: Worker) -> Optional[SkinItem]:
@@ -649,6 +674,7 @@ class HighSpeedScraper:
 
     async def _scrape_variant_with_proxy(self, worker: Worker, item: SkinItem, variant: Dict) -> bool:
         """Scrape a single variant using proxy with random headers"""
+        session = None
         try:
             # Get random headers for this request
             headers = self._get_random_headers()
@@ -656,49 +682,66 @@ class HighSpeedScraper:
             # Construct Steam Market URL for this variant
             market_name = self._build_market_name(item, variant)
 
-            # Use Steam API client with proxy and random headers
-            async with self.steam_client:
-                # Mock the request with headers and proxy for now
-                # In real implementation, this would make the actual request
-                # with the proxy and headers
+            # Create session for this request
+            timeout = aiohttp.ClientTimeout(total=30)
+            session = aiohttp.ClientSession(
+                headers=headers,
+                timeout=timeout
+            )
 
-                # Simulate request with realistic timing
-                request_time = random.uniform(0.5, 2.0)
-                await asyncio.sleep(request_time)
+            # Make actual request to Steam Market API
+            steam_url = "https://steamcommunity.com/market/priceoverview/"
+            params = {
+                'currency': '1',  # USD
+                'appid': '730',   # CS2
+                'market_hash_name': market_name
+            }
 
-                # Simulate success rate for proxy requests
-                success_rate = 0.7  # 70% success rate for proxy requests
-                success = random.random() < success_rate
-
-                if success:
-                    # Simulate successful response
-                    response = {
-                        'success': True,
-                        'lowest_price': f"${random.uniform(10, 1000):.2f}",
-                        'volume': str(random.randint(1, 100)),
-                        'median_price': f"${random.uniform(10, 1000):.2f}"
-                    }
-
-                    # Update variant price data
-                    await self._update_variant_price(item, variant, response)
-                    logger.debug(
-                        f"✅ Proxy scraped {variant['wear']} for {item.id}")
-                    return True
+            async with session.get(
+                steam_url,
+                params=params,
+                proxy=worker.proxy_info.url if worker.proxy_info else None
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get('success'):
+                        # Process the real response data
+                        await self._update_variant_price(item, variant, data)
+                        logger.debug(
+                            f"✅ Proxy scraped {variant['wear']} for {item.id}")
+                        return True
+                    else:
+                        logger.debug(
+                            f"❌ Steam API returned success=false for {variant['wear']}")
+                        return False
+                elif response.status == 429:
+                    # Rate limit hit
+                    logger.warning(
+                        f"⏰ Proxy {worker.id} hit rate limit on {variant['wear']}")
+                    worker.status = WorkerStatus.RATE_LIMITED
+                    worker.rate_limit_until = datetime.now() + timedelta(seconds=self.rate_limit_wait)
+                    return False
                 else:
                     logger.debug(
-                        f"❌ Proxy failed {variant['wear']} for {item.id}")
+                        f"❌ HTTP {response.status} for {variant['wear']}")
                     return False
 
-        except Exception as e:
-            logger.error(f"❌ Error scraping variant with proxy: {e}")
+        except asyncio.TimeoutError:
+            logger.debug(
+                f"⏰ Timeout for proxy {worker.id} on {variant['wear']}")
             return False
+        except Exception as e:
+            logger.error(
+                f"❌ Error scraping {variant['wear']} with proxy {worker.id}: {e}")
+            return False
+        finally:
+            # Ensure session is properly closed
+            if session and not session.closed:
+                await session.close()
 
     async def _process_item_with_webdriver(self, worker: Worker, item: SkinItem) -> bool:
-        """Process entire item (all variants) with WebDriver"""
+        """Process entire item (all variants) with WebDriver (silent processing)"""
         try:
-            logger.info(
-                f"🌐 WebDriver {worker.id} processing entire item: {item.id}")
-
             # Apply rate limiting (1-3 requests per second)
             if worker.rate_limiter:
                 await worker.rate_limiter.wait_for_next_request()
@@ -889,14 +932,29 @@ class HighSpeedScraper:
             while not temp_queue.empty():
                 self.fallback_queue.put(temp_queue.get_nowait())
 
-            # Create checkpoint data
+            # Create checkpoint data with proper datetime serialization
+            stats_copy = self.stats.copy()
+            # Convert any datetime objects in stats to ISO format
+            for key, value in stats_copy.items():
+                if isinstance(value, datetime):
+                    stats_copy[key] = value.isoformat()
+
+            # Convert datetime objects in in_progress_fallback
+            in_progress_copy = {}
+            for item_id, data in self.in_progress_fallback.items():
+                item_copy = data.copy()
+                for key, value in item_copy.items():
+                    if isinstance(value, datetime):
+                        item_copy[key] = value.isoformat()
+                in_progress_copy[item_id] = item_copy
+
             checkpoint_data = {
                 'timestamp': datetime.now().isoformat(),
                 'version': '1.0',
                 'fallback_queue': fallback_items,
-                'in_progress_fallback': self.in_progress_fallback.copy(),
-                'stats': self.stats.copy(),
-                'total_items': len(fallback_items) + len(self.in_progress_fallback)
+                'in_progress_fallback': in_progress_copy,
+                'stats': stats_copy,
+                'total_items': len(fallback_items) + len(in_progress_copy)
             }
 
             # Calculate checksum
@@ -982,7 +1040,7 @@ class HighSpeedScraper:
             logger.error(f"❌ Error loading fallback checkpoint: {e}")
 
     def _mark_item_completed(self, item: SkinItem):
-        """Mark item as completed"""
+        """Mark item as completed (reduced logging)"""
         self.completed_items.add(item.id)
         self.stats['items_processed'] += 1
         self.stats['last_activity'] = datetime.now()
@@ -990,7 +1048,38 @@ class HighSpeedScraper:
         # Remove from in-progress fallback if it was there
         self.in_progress_fallback.pop(item.id, None)
 
-        logger.info(f"✅ Item completed: {item.id}")
+        # Only log every 5th item completion
+        if self.stats['items_processed'] % 5 == 0 or len(self.completed_items) <= 3:
+            logger.info(
+                f"✅ Completed: {item.id} | Progress: {len(self.completed_items)}/{self.stats.get('total_items', '?')} items")
+
+        # Check if all work is complete and trigger shutdown
+        self._check_completion_and_shutdown()
+
+    def _check_completion_and_shutdown(self):
+        """Check if all work is complete and trigger graceful shutdown"""
+        total_items = self.stats.get('total_items', 0)
+        completed_items = len(self.completed_items)
+
+        # Check if we've completed all items
+        if total_items > 0 and completed_items >= total_items:
+            logger.info(
+                f"🎉 ALL WORK COMPLETED! Processed {completed_items}/{total_items} items")
+            logger.info("🛑 Triggering automatic shutdown...")
+            self.shutdown_event.set()
+            return
+
+        # Also check if both queues are empty and no workers are active
+        main_queue_empty = self.main_queue.empty()
+        fallback_queue_empty = self.fallback_queue.empty()
+        active_workers = len(
+            [w for w in self.workers.values() if w.status == WorkerStatus.WORKING])
+
+        if main_queue_empty and fallback_queue_empty and active_workers == 0:
+            logger.info(
+                f"🎉 ALL QUEUES EMPTY AND NO ACTIVE WORKERS! Completed {completed_items} items")
+            logger.info("🛑 Triggering automatic shutdown...")
+            self.shutdown_event.set()
 
     def _mark_item_failed(self, item: SkinItem):
         """Mark item as failed"""
@@ -1003,7 +1092,7 @@ class HighSpeedScraper:
         logger.warning(f"❌ Item failed: {item.id}")
 
     def _log_worker_status(self):
-        """Log current worker status"""
+        """Log current worker status with enhanced formatting"""
         proxy_count = len([w for w in self.workers.values()
                           if w.worker_type == WorkerType.PROXY])
         webdriver_count = len(
@@ -1016,8 +1105,12 @@ class HighSpeedScraper:
         rate_limited_count = len(
             [w for w in self.workers.values() if w.status == WorkerStatus.RATE_LIMITED])
 
-        logger.info(f"👥 Workers: {proxy_count} proxies, {webdriver_count} WebDrivers | "
-                    f"Active: {active_count}, Idle: {idle_count}, Rate Limited: {rate_limited_count}")
+        logger.info("-" * 60)
+        logger.info(
+            f"👥 WORKER STATUS: {proxy_count} proxies, {webdriver_count} WebDrivers")
+        logger.info(
+            f"📊 Active: {active_count} | Idle: {idle_count} | Rate Limited: {rate_limited_count}")
+        logger.info("-" * 60)
 
     async def _statistics_loop(self):
         """Periodic statistics reporting"""
@@ -1032,6 +1125,15 @@ class HighSpeedScraper:
                             f"Failed: {self.stats['items_failed']}, "
                             f"Queue: {self.main_queue.qsize()}, "
                             f"Fallback: {self.fallback_queue.qsize()}")
+
+    async def _completion_monitor_loop(self):
+        """Monitor for completion and trigger shutdown when all work is done"""
+        while not self.shutdown_event.is_set():
+            await asyncio.sleep(5)  # Check every 5 seconds
+
+            if not self.shutdown_event.is_set():
+                # Trigger completion check
+                self._check_completion_and_shutdown()
 
     async def load_items_from_database(self, database_path: str):
         """Load items from database and populate the queue (NEWEST FIRST)"""
@@ -1067,11 +1169,79 @@ class HighSpeedScraper:
             logger.error(f"❌ Error loading items from database: {e}")
             raise
 
+    async def _progress_reporter(self):
+        """Report progress every 10 seconds with enhanced formatting and detailed metrics"""
+        while not self.shutdown_event.is_set():
+            try:
+                await asyncio.sleep(10)  # Report every 10 seconds
+
+                if self.shutdown_event.is_set():
+                    break
+
+                # Calculate statistics
+                elapsed = datetime.now() - self.stats.get('start_time', datetime.now())
+                elapsed_seconds = max(1, elapsed.total_seconds())
+
+                processed_items = len(self.completed_items)
+                total_items = self.stats.get('total_items', 0)
+                remaining_items = max(0, total_items - processed_items)
+
+                # Calculate variant metrics (estimate 50 variants per item)
+                estimated_variants_per_item = 50
+                estimated_variants_processed = processed_items * estimated_variants_per_item
+                estimated_total_variants = total_items * estimated_variants_per_item
+                estimated_remaining_variants = remaining_items * estimated_variants_per_item
+
+                # Calculate processing rates
+                items_per_second = processed_items / elapsed_seconds
+                variants_per_second = estimated_variants_processed / elapsed_seconds
+                variants_per_minute = variants_per_second * 60
+
+                # ETA calculation
+                if items_per_second > 0 and remaining_items > 0:
+                    eta_seconds = remaining_items / items_per_second
+                    eta_hours = int(eta_seconds // 3600)
+                    eta_minutes = int((eta_seconds % 3600) // 60)
+                    eta_str = f"{eta_hours:02d}:{eta_minutes:02d}:{int(eta_seconds % 60):02d}"
+                else:
+                    eta_str = "completing soon..."
+
+                # Progress percentage
+                progress_pct = (processed_items / total_items *
+                                100) if total_items > 0 else 0
+
+                # Enhanced formatted output with separator
+                logger.info("=" * 80)
+                logger.info("📊 COMPREHENSIVE PROGRESS REPORT")
+                logger.info("=" * 80)
+                logger.info(
+                    f"🎯 Progress: {progress_pct:.1f}% | Items: {processed_items:,}/{total_items:,} | Remaining: {remaining_items:,}")
+                logger.info(
+                    f"🔥 Variants: {estimated_variants_processed:,}/{estimated_total_variants:,} processed | {estimated_remaining_variants:,} remaining")
+                logger.info(
+                    f"⚡ Speed: {variants_per_minute:.1f} variants/min | {items_per_second:.2f} items/sec")
+                logger.info(f"⏰ Runtime: {elapsed} | ETA: {eta_str}")
+                logger.info(
+                    f"🏭 Database completion: {progress_pct:.1f}% ({int(elapsed_seconds/60)} minutes elapsed)")
+                logger.info("=" * 80)
+
+            except asyncio.CancelledError:
+                raise  # Re-raise cancellation
+            except Exception as e:
+                logger.error(f"Progress reporter error: {e}")
+
     async def start_scraping(self):
-        """Start the high-speed scraping process"""
+        """Start the high-speed scraping process with progress tracking"""
         logger.info("🚀 Starting high-speed scraping...")
 
         self.running = True
+
+        # Initialize progress tracking
+        self.stats['start_time'] = datetime.now()
+        self.stats['total_items'] = self.main_queue.qsize()
+
+        # Start progress reporter
+        progress_task = asyncio.create_task(self._progress_reporter())
 
         # NO WAITING - START IMMEDIATELY! WebDrivers are already stealing work!
         # await asyncio.sleep(5)  # REMOVED: Immediate startup as requested
@@ -1080,8 +1250,13 @@ class HighSpeedScraper:
         logger.info(f"📊 Queue size: {self.main_queue.qsize()} items")
         logger.info(f"👥 Active workers: {len(self.workers)}")
 
-        # Wait until shutdown
-        await self.shutdown_event.wait()
+        try:
+            # Wait until shutdown
+            await self.shutdown_event.wait()
+        finally:
+            # Cancel progress reporting
+            progress_task.cancel()
+            # Don't wait for cancellation - let it finish naturally
 
     async def shutdown(self):
         """Gracefully shutdown the scraping system"""
@@ -1090,15 +1265,34 @@ class HighSpeedScraper:
         self.running = False
         self.shutdown_event.set()
 
-        # Close WebDriver pool
-        if hasattr(self, 'webdriver_pool'):
-            await asyncio.get_event_loop().run_in_executor(
-                None, self.webdriver_pool.cleanup
-            )
+        # Cancel all background tasks
+        for task in self.background_tasks:
+            if not task.done():
+                task.cancel()
 
-        # Close Steam client
-        if self.steam_client:
-            await self.steam_client.__aexit__(None, None, None)
+        # Wait for tasks to complete cancellation
+        if self.background_tasks:
+            await asyncio.gather(*self.background_tasks, return_exceptions=True)
+
+        # Close proxy manager (which handles its own session cleanup)
+        # Note: ProxyManager doesn't have a cleanup method, sessions are managed per-request
+
+        # Close WebDriver pool properly
+        if hasattr(self, 'webdriver_pool') and self.webdriver_pool:
+            try:
+                # Run the cleanup in executor since it only does sync operations
+                await asyncio.get_event_loop().run_in_executor(
+                    None, self.webdriver_pool.cleanup
+                )
+            except Exception as e:
+                logger.warning(f"⚠️ Error cleaning up WebDriver pool: {e}")
+
+        # Close Steam client properly
+        if hasattr(self, 'steam_client') and self.steam_client:
+            try:
+                await self.steam_client.__aexit__(None, None, None)
+            except Exception as e:
+                logger.warning(f"⚠️ Error closing Steam client: {e}")
 
         logger.info("✅ High-speed scraping system shutdown complete")
 

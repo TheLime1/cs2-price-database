@@ -158,7 +158,7 @@ class WebDriverPool:
         if driver and driver in self.drivers:
             self.driver_queue.put(driver)
 
-    async def cleanup(self):
+    def cleanup(self):
         """Clean up all drivers"""
         logger.info("🧹 Cleaning up WebDriver pool...")
 
@@ -225,7 +225,7 @@ class OptimizedCSGODatabaseScraper:
                 pass
 
         # Clean up driver pool
-        await self.driver_pool.cleanup()
+        self.driver_pool.cleanup()
         logger.info("✅ Optimized scraper stopped")
 
     def _get_cache_key(self, detail_url: str, wear_condition: str, stattrak: bool) -> str:
