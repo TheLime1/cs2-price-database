@@ -189,7 +189,7 @@ class HighSpeedScraper:
         self.max_active_proxies = 150
         self.initial_proxy_batch = 5
         self.rate_limit_wait = 61  # seconds
-        self.health_check_interval = 30  # seconds
+        self.health_check_interval = 120  # seconds - reduced frequency to avoid spam
 
         # Calculate optimal WebDriver count
         self.webdriver_count = self._calculate_webdriver_count()
@@ -238,6 +238,22 @@ class HighSpeedScraper:
             f"🧮 WebDriver calculation: min({cpu_based}, {ram_based}) = {optimal_count}")
 
         return optimal_count
+
+    def configure(self, noproxy: bool = False, fallback_only: bool = False, ignore_stattrak: bool = False):
+        """Configure the scraper with command-line flags"""
+        self.config = {
+            'noproxy': noproxy,
+            'fallback_only': fallback_only,
+            'ignore_stattrak': ignore_stattrak
+        }
+
+        if noproxy:
+            logger.info("🚫 Proxy disabled for high-speed scraper")
+        if fallback_only:
+            logger.info(
+                "🔄 Fallback-only mode - will use WebDriver scraping only")
+        if ignore_stattrak:
+            logger.info("⚡ StatTrak variants will be skipped")
 
     async def initialize(self):
         """Initialize the scraping system"""
@@ -380,6 +396,13 @@ class HighSpeedScraper:
 
         logger.info(
             f"🏥 Health check complete: {len(healthy_proxies)}/{len(proxies)} proxies healthy")
+        
+        # Only log if we have few or no healthy proxies (to reduce spam)
+        if len(healthy_proxies) == 0:
+            logger.warning(f"⚠️ No healthy proxies found in this batch")
+        elif len(healthy_proxies) < 3:
+            logger.warning(f"⚠️ Only {len(healthy_proxies)} healthy proxies found")
+        
         return healthy_proxies
 
     async def _test_proxy_health(self, proxy: ProxyInfo) -> bool:
@@ -768,25 +791,77 @@ class HighSpeedScraper:
             return False
 
     async def _scrape_all_variants_with_webdriver(self, worker: Worker, item: SkinItem) -> bool:
-        """Scrape all variants using WebDriver with rate limiting"""
+        """Scrape all variants using WebDriver from the detail URL (csgodatabase.com)"""
         try:
-            # This would use the existing optimized fallback scraper
-            # to scrape all variants from the detail page at once
+            # Apply rate limiting
+            if worker.rate_limiter:
+                await worker.rate_limiter.wait_for_next_request()
 
-            # For now, simulate the process with realistic timing
-            processing_time = random.uniform(2.0, 5.0)  # 2-5 seconds per item
-            await asyncio.sleep(processing_time)
+            # Use the existing WebDriver pool to get comprehensive weapon info
+            # This will scrape the detail page and get ALL variant prices at once
+            if not hasattr(self, 'webdriver_pool') or not self.webdriver_pool:
+                logger.error("❌ WebDriver pool not available")
+                return False
 
-            # Simulate success rate (WebDrivers are more reliable)
-            success_rate = 0.9  # 90% success rate for WebDrivers
-            success = random.random() < success_rate
+            # Create a temporary scraper instance to use the existing scraping logic
+            from optimized_fallback_scraper import OptimizedCSGODatabaseScraper
 
-            if success:
-                logger.debug(f"✅ WebDriver scraped all variants for {item.id}")
-            else:
-                logger.debug(f"❌ WebDriver failed to scrape {item.id}")
+            async with OptimizedCSGODatabaseScraper(pool_size=1, headless=True) as scraper:
+                # Get comprehensive weapon info (all variants, prices, etc.)
+                weapon_info = await scraper.get_weapon_info(item.detail_url, item.full_name)
 
-            return success
+                if not weapon_info or not weapon_info.get('prices'):
+                    logger.warning(f"❌ No weapon info found for {item.id}")
+                    return False
+
+                all_success = True
+                updated_count = 0
+
+                # Process each variant from the item variants
+                for variant in item.variants:
+                    try:
+                        wear_condition = variant['wear']
+                        updated = False
+
+                        # Look for normal price in the scraped data
+                        if wear_condition in weapon_info['prices']:
+                            normal_price = weapon_info['prices'][wear_condition]
+                            if normal_price and normal_price > 0:
+                                await self._update_variant_price_from_scraped_data(
+                                    item, variant, {'usd': normal_price}, is_stattrak=False
+                                )
+                                updated = True
+
+                        # Look for StatTrak price
+                        stattrak_key = f"StatTrak {wear_condition}"
+                        if stattrak_key in weapon_info['prices']:
+                            stattrak_price = weapon_info['prices'][stattrak_key]
+                            if stattrak_price and stattrak_price > 0:
+                                await self._update_variant_price_from_scraped_data(
+                                    item, variant, {'usd': stattrak_price}, is_stattrak=True
+                                )
+                                updated = True
+
+                        if updated:
+                            updated_count += 1
+                            logger.debug(
+                                f"✅ Updated prices for {item.id} {variant['wear']}")
+                        else:
+                            logger.debug(
+                                f"⚠️ No valid prices for {item.id} {variant['wear']}")
+
+                    except Exception as e:
+                        logger.error(
+                            f"❌ Error processing variant {variant['wear']} for {item.id}: {e}")
+                        all_success = False
+
+                if updated_count > 0:
+                    logger.info(
+                        f"✅ WebDriver updated {updated_count} variants for {item.id}")
+                    return True
+                else:
+                    logger.warning(f"❌ No prices updated for {item.id}")
+                    return False
 
         except Exception as e:
             logger.error(f"❌ Error scraping with WebDriver: {e}")
@@ -803,10 +878,145 @@ class HighSpeedScraper:
             return f"{item.full_name} ({wear})"
 
     async def _update_variant_price(self, item: SkinItem, variant: Dict, price_data: Dict):
-        """Update variant price data"""
-        # This would update the price in the variant data structure
-        # and eventually save to the database
-        pass
+        """Update variant price data in the database"""
+        try:
+            # Load the current database
+            database_path = "data/skins_database.json"
+            with open(database_path, 'r', encoding='utf-8') as f:
+                database = json.load(f)
+
+            # Find the skin in the database
+            skin_found = False
+            for skin in database['skins']:
+                if skin['id'] == item.id:
+                    # Find the matching variant
+                    for db_variant in skin.get('variants', []):
+                        if db_variant['wear'] == variant['wear']:
+                            # Update the price data
+                            if 'prices' not in db_variant:
+                                db_variant['prices'] = {}
+                            if 'normal' not in db_variant['prices']:
+                                db_variant['prices']['normal'] = {}
+
+                            # Extract price from Steam API response
+                            price_usd = 0.0
+                            if price_data.get('success') and price_data.get('lowest_price'):
+                                price_str = price_data['lowest_price'].replace(
+                                    '$', '').replace(',', '')
+                                try:
+                                    price_usd = float(price_str)
+                                except ValueError:
+                                    price_usd = 0.0
+
+                            # Update the price data
+                            db_variant['prices']['normal'].update({
+                                'usd': price_usd,
+                                'last_updated': datetime.now().isoformat(),
+                                'raw_data': price_data,
+                                'success': price_data.get('success', False),
+                                'lowest_price': price_data.get('lowest_price')
+                            })
+
+                            skin_found = True
+                            logger.debug(
+                                f"💾 Updated price for {item.id} {variant['wear']}: ${price_usd}")
+                            break
+
+                    if skin_found:
+                        # Update skin metadata
+                        if 'metadata' not in skin:
+                            skin['metadata'] = {}
+                        skin['metadata']['last_updated'] = datetime.now().isoformat()
+                        break
+
+            if skin_found:
+                # Update database metadata
+                database['data_status']['last_price_update'] = datetime.now(
+                ).isoformat()
+
+                # Save the updated database
+                with open(database_path, 'w', encoding='utf-8') as f:
+                    json.dump(database, f, indent=2, ensure_ascii=False)
+
+                logger.debug(f"💾 Database updated for {item.id}")
+            else:
+                logger.warning(
+                    f"⚠️ Could not find {item.id} in database for price update")
+
+        except Exception as e:
+            logger.error(f"❌ Error updating database for {item.id}: {e}")
+
+    async def _update_variant_price_from_scraped_data(self, item: SkinItem, variant: dict, price_data: dict, is_stattrak: bool = False) -> bool:
+        """Update variant price with scraped data from detail page"""
+        try:
+            if not price_data or not price_data.get('usd'):
+                return False
+
+            # Load the current database
+            database_path = "data/skins_database.json"
+            with open(database_path, 'r', encoding='utf-8') as f:
+                database = json.load(f)
+
+            # Find the skin in the database
+            skin_found = False
+            for skin in database['skins']:
+                if skin['id'] == item.id:
+                    # Find the matching variant
+                    for db_variant in skin.get('variants', []):
+                        if db_variant['wear'] == variant['wear']:
+                            # Initialize price structure if needed
+                            if 'prices' not in db_variant:
+                                db_variant['prices'] = {}
+
+                            # Update the appropriate price type
+                            price_key = 'stattrak' if is_stattrak else 'normal'
+                            if price_key not in db_variant['prices']:
+                                db_variant['prices'][price_key] = {}
+
+                            # Update the price data
+                            db_variant['prices'][price_key].update({
+                                'usd': price_data['usd'],
+                                'last_updated': datetime.now().isoformat(),
+                                'scraped_from': 'csgodatabase_detail_page',
+                                'source': 'webdriver_scraper'
+                            })
+
+                            # Also update EUR if available
+                            if price_data.get('eur'):
+                                db_variant['prices'][price_key]['eur'] = price_data['eur']
+
+                            skin_found = True
+                            logger.debug(
+                                f"💾 Updated {price_key} price for {item.id} {variant['wear']}: ${price_data['usd']}")
+                            break
+
+                    if skin_found:
+                        # Update skin metadata
+                        if 'metadata' not in skin:
+                            skin['metadata'] = {}
+                        skin['metadata']['last_updated'] = datetime.now().isoformat()
+                        break
+
+            if skin_found:
+                # Update database metadata
+                database['data_status']['last_price_update'] = datetime.now(
+                ).isoformat()
+
+                # Save the updated database
+                with open(database_path, 'w', encoding='utf-8') as f:
+                    json.dump(database, f, indent=2, ensure_ascii=False)
+
+                logger.debug(f"💾 Database updated for {item.id}")
+                return True
+            else:
+                logger.warning(
+                    f"⚠️ Could not find {item.id} in database for price update")
+                return False
+
+        except Exception as e:
+            logger.error(
+                f"❌ Error updating database from scraped data for {item.id}: {e}")
+            return False
 
     def _delegate_to_fallback(self, item: SkinItem, is_webdriver_failure: bool = False):
         """Delegate item to fallback queue with appropriate priority"""
@@ -970,6 +1180,9 @@ class HighSpeedScraper:
             # Atomic rename
             if os.path.exists(self.checkpoint_path):
                 backup_path = f"{self.checkpoint_path}.backup"
+                # Remove existing backup if it exists
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
                 os.rename(self.checkpoint_path, backup_path)
 
             os.rename(temp_path, self.checkpoint_path)
@@ -1295,29 +1508,3 @@ class HighSpeedScraper:
                 logger.warning(f"⚠️ Error closing Steam client: {e}")
 
         logger.info("✅ High-speed scraping system shutdown complete")
-
-
-# Example usage
-async def main():
-    """Example of how to use the high-speed scraper"""
-    scraper = HighSpeedScraper()
-
-    try:
-        # Initialize the system
-        await scraper.initialize()
-
-        # Load items from database
-        await scraper.load_items_from_database("data/skins_database.json")
-
-        # Start scraping
-        await scraper.start_scraping()
-
-    except KeyboardInterrupt:
-        logger.info("⚠️ Received interrupt signal")
-    finally:
-        await scraper.shutdown()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())

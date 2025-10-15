@@ -88,6 +88,30 @@ class V2PriceCollector:
             'https://raw.githubusercontent.com/TheLime1/Validity/refs/heads/main/data/http.txt'
         )
 
+    def configure(self, update_availability: bool = False, ignore_stattrak: bool = False,
+                  noproxy: bool = False, fallback_only: bool = False, debug: bool = False):
+        """Configure the collector with command-line flags"""
+        self.config = {
+            'update_availability': update_availability,
+            'ignore_stattrak': ignore_stattrak,
+            'noproxy': noproxy,
+            'fallback_only': fallback_only,
+            'debug': debug
+        }
+
+        # Log configuration
+        if debug:
+            logger.info("🔧 Debug mode enabled - detailed logging active")
+        if noproxy:
+            logger.info("🚫 Proxy disabled - using direct connections")
+        if fallback_only:
+            logger.info("🔄 Fallback-only mode - skipping Steam API")
+        if ignore_stattrak:
+            logger.info("⚡ Ignoring StatTrak variants for faster collection")
+        if update_availability:
+            logger.info(
+                "📊 Availability update mode - analyzing variant availability")
+
     async def initialize(self):
         """Initialize the V2.0 scraping system"""
         print("🚀" + "="*80)
@@ -169,6 +193,12 @@ class V2PriceCollector:
 
         missing_items = []
         processed_skins = 0
+        ignore_stattrak = getattr(self, 'config', {}).get(
+            'ignore_stattrak', False)
+
+        if ignore_stattrak:
+            logger.info(
+                "⚡ Ignoring StatTrak variants - processing normal variants only")
 
         # Process skins in NEWEST FIRST order (reverse database order)
         skins_list = list(data.get('skins', []))
@@ -188,12 +218,13 @@ class V2PriceCollector:
                     has_missing = True
                     missing_variants.append(variant)
 
-                # Check StatTrak version
-                stattrak_price = variant.get('stattrak_price', {})
-                if not stattrak_price or self.needs_price_update({'price': stattrak_price}):
-                    has_missing = True
-                    if variant not in missing_variants:
-                        missing_variants.append(variant)
+                # Check StatTrak version (only if not ignoring StatTrak)
+                if not ignore_stattrak:
+                    stattrak_price = variant.get('stattrak_price', {})
+                    if not stattrak_price or self.needs_price_update({'price': stattrak_price}):
+                        has_missing = True
+                        if variant not in missing_variants:
+                            missing_variants.append(variant)
 
             if has_missing:
                 # Create SkinItem with only missing variants
@@ -220,17 +251,149 @@ class V2PriceCollector:
 
         return missing_items
 
-    async def collect_prices(self, missing_only: bool = False, limit: Optional[int] = None, resume: bool = True):
+    async def _update_availability_mode(self, data: Dict, limit: Optional[int] = None):
+        """Update availability information for weapons using fallback scraper"""
+        from optimized_fallback_scraper import OptimizedCSGODatabaseScraper
+
+        logger.info(
+            "🔍 Starting availability analysis using OptimizedCSGODatabaseScraper")
+
+        # Get list of skins to analyze
+        skins_list = list(data.get('skins', []))
+        if limit:
+            skins_list = skins_list[:limit]
+            logger.info(f"📊 Limited analysis to first {limit} skins")
+        else:
+            logger.info(
+                f"📊 Analyzing availability for all {len(skins_list)} skins")
+
+        updated_count = 0
+
+        # Use the optimized fallback scraper for availability analysis
+        async with OptimizedCSGODatabaseScraper(pool_size=3, headless=True) as scraper:
+            for i, skin_data in enumerate(skins_list, 1):
+                try:
+                    detail_url = skin_data['detail_url']
+                    full_name = skin_data['full_name']
+
+                    logger.info(
+                        f"🔍 [{i}/{len(skins_list)}] Analyzing {full_name}")
+
+                    # Get comprehensive weapon info including availability
+                    weapon_info = await scraper.get_weapon_info(detail_url, full_name)
+
+                    if weapon_info and weapon_info.get('availability'):
+                        # Update availability data in the database
+                        if await self._update_skin_availability(skin_data, weapon_info):
+                            updated_count += 1
+                            logger.info(
+                                f"✅ Updated availability for {full_name}")
+                        else:
+                            logger.warning(
+                                f"⚠️ Failed to save availability for {full_name}")
+                    else:
+                        logger.warning(
+                            f"❌ No availability data found for {full_name}")
+
+                except Exception as e:
+                    logger.error(
+                        f"❌ Error analyzing {skin_data.get('full_name', 'unknown')}: {e}")
+                    continue
+
+        # Save updated database
+        await self._save_database(data)
+
+        logger.info(
+            f"🎉 Availability analysis complete! Updated {updated_count}/{len(skins_list)} skins")
+
+    async def _update_skin_availability(self, skin_data: Dict, weapon_info: Dict) -> bool:
+        """Update a single skin's availability data"""
+        try:
+            # Update availability fields
+            if 'availability' in weapon_info:
+                skin_data['availability'] = weapon_info['availability']
+
+            if 'stattrak_availability' in weapon_info:
+                skin_data['stattrak_availability'] = weapon_info['stattrak_availability']
+
+            if 'listings' in weapon_info:
+                skin_data['listings'] = weapon_info['listings']
+
+            # Update metadata
+            if 'metadata' not in skin_data:
+                skin_data['metadata'] = {}
+            skin_data['metadata']['availability_last_updated'] = datetime.now(
+            ).isoformat()
+
+            # Also update variant-level availability if variants exist
+            if 'variants' in skin_data:
+                for variant in skin_data['variants']:
+                    wear = variant['wear']
+
+                    # Set availability flags
+                    variant['available'] = weapon_info.get(
+                        'availability', {}).get(wear, False)
+                    variant['stattrak_available'] = weapon_info.get(
+                        'stattrak_availability', {}).get(wear, False)
+
+                    # Set listing flags
+                    variant['has_normal_listings'] = weapon_info.get(
+                        'listings', {}).get(wear, False)
+                    variant['has_stattrak_listings'] = weapon_info.get(
+                        'listings', {}).get(f"StatTrak {wear}", False)
+
+            return True
+
+        except Exception as e:
+            logger.error(
+                f"❌ Error updating availability for {skin_data.get('full_name', 'unknown')}: {e}")
+            return False
+
+    async def _save_database(self, data: Dict):
+        """Save the updated database"""
+        try:
+            # Update database metadata
+            data['data_status']['last_availability_update'] = datetime.now().isoformat()
+
+            # Save to file
+            with open(self.database_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            logger.info("💾 Database saved successfully")
+
+        except Exception as e:
+            logger.error(f"❌ Error saving database: {e}")
+            raise
+
+    async def collect_prices(self, missing_only: bool = False, limit: Optional[int] = None, resume: bool = True,
+                             update_availability: bool = False, ignore_stattrak: bool = False,
+                             noproxy: bool = False, fallback_only: bool = False, debug: bool = False):
         """Main collection method using V2.0 worker stealing architecture"""
+
+        # Configure the collector with the provided flags
+        self.configure(update_availability, ignore_stattrak,
+                       noproxy, fallback_only, debug)
+
+        # Configure the scraper with relevant flags
+        self.scraper.configure(
+            noproxy=noproxy, fallback_only=fallback_only, ignore_stattrak=ignore_stattrak)
 
         self.stats['start_time'] = datetime.now()
 
         # Load database
         data = self.load_database()
 
+        # Handle special modes
+        if update_availability:
+            logger.info(
+                "🔍 Update availability mode - analyzing weapon availability")
+            await self._update_availability_mode(data, limit)
+            return
+
         # Load checkpoint if resuming
-        if resume:
+        if resume and not missing_only:
             checkpoint = self.load_checkpoint()
+            # TODO: Use checkpoint data for resuming
 
         if missing_only:
             logger.info(
@@ -374,20 +537,45 @@ ENVIRONMENT VARIABLES:
     parser.add_argument('--no-resume', action='store_true',
                         help='Start from beginning instead of resuming from checkpoint')
 
+    # Additional flags from documentation
+    parser.add_argument('--update-availability', action='store_true',
+                        help='Update weapon availability information to detect which wear conditions and StatTrak variants actually exist')
+    parser.add_argument('--ignore-stattrak', action='store_true',
+                        help='Skip StatTrak variants to speed up collection')
+    parser.add_argument('--noproxy', action='store_true',
+                        help='Disable proxy usage and use direct connection to Steam API')
+    parser.add_argument('--fallback-only', action='store_true',
+                        help='Skip Steam API entirely and use only fallback scraping method')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable detailed debug output including API endpoints and responses')
+
     args = parser.parse_args()
+
+    # Handle debug flag - set logging level
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger('high_speed_scraper').setLevel(logging.DEBUG)
+        logging.getLogger('optimized_fallback_scraper').setLevel(logging.DEBUG)
+        logging.getLogger('steam_api').setLevel(logging.DEBUG)
+        logging.getLogger('proxy_manager').setLevel(logging.DEBUG)
 
     # Create collector
     collector = V2PriceCollector()
 
-    # Handle shutdown signals
-    shutdown_task = None
+    # Create shutdown event for proper signal handling
+    shutdown_event = asyncio.Event()
+    shutdown_initiated = False
 
     def signal_handler(signum, frame):
-        nonlocal shutdown_task
-        logger.info(
-            "Received interrupt signal - initiating graceful shutdown...")
-        if not shutdown_task:
-            shutdown_task = asyncio.create_task(collector.shutdown())
+        nonlocal shutdown_initiated
+        if not shutdown_initiated:
+            shutdown_initiated = True
+            logger.info("🛑 Ctrl+C pressed - Initiating immediate shutdown...")
+            shutdown_event.set()
+        else:
+            logger.info("🚨 Multiple Ctrl+C detected - Force killing...")
+            import sys
+            sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -396,20 +584,42 @@ ENVIRONMENT VARIABLES:
         # Initialize V2.0 system
         await collector.initialize()
 
-        # Start collection
-        await collector.collect_prices(
+        # Create collection task
+        collection_task = asyncio.create_task(collector.collect_prices(
             missing_only=args.missing_only,
             limit=args.limit,
-            resume=not args.no_resume
-        )
+            resume=not args.no_resume,
+            update_availability=args.update_availability,
+            ignore_stattrak=args.ignore_stattrak,
+            noproxy=args.noproxy,
+            fallback_only=args.fallback_only,
+            debug=args.debug
+        ))
+
+        # Wait for either completion or shutdown signal
+        await asyncio.wait([
+            collection_task,
+            asyncio.create_task(shutdown_event.wait())
+        ], return_when=asyncio.FIRST_COMPLETED)
+
+        # If shutdown was triggered, cancel the collection
+        if shutdown_event.is_set():
+            logger.info("🛑 Shutdown signal received - cancelling collection...")
+            collection_task.cancel()
+            try:
+                await collection_task
+            except asyncio.CancelledError:
+                logger.info("✅ Collection cancelled successfully")
 
     except KeyboardInterrupt:
-        logger.info("Received interrupt signal")
+        logger.info("🛑 Keyboard interrupt detected")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error(f"❌ Unexpected error: {e}")
         raise
     finally:
+        logger.info("🔧 Starting final cleanup...")
         await collector.shutdown()
+        logger.info("✅ Shutdown complete")
 
 
 if __name__ == "__main__":

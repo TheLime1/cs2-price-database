@@ -7,7 +7,7 @@
     "wear_availability": "assumed_all (needs verification)",
     "stattrak_availability": "assumed_all (needs verification)",
     "prices": "not_fetched (all set to 0)",
-    "last_price_update": "2025-10-14T20:51:37.018999",
+    "last_price_update": "2025-10-15T20:39:58.006295",
     "last_cleanup": "2025-10-13T19:38:55.900077"
   },
   "skins": [
@@ -216207,7 +216207,7 @@
           "prices": {
             "normal": {
               "usd": 2.31,
-              "last_updated": "2025-10-13T21:32:13.600024",
+              "last_updated": "2025-10-15T20:39:53.827066",
               "success": true,
               "lowest_price": "$2.31",
               "volume": "51",
@@ -216217,11 +216217,13 @@
                 "lowest_price": "$2.31",
                 "volume": "62",
                 "median_price": "$2.20"
-              }
+              },
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             },
             "stattrak": {
-              "usd": 4.04,
-              "last_updated": "2025-10-13T21:31:44.432430",
+              "usd": 4.03,
+              "last_updated": "2025-10-15T20:39:54.282480",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$4.04",
@@ -216229,7 +216231,9 @@
                 "median_price": "$2.81"
               },
               "success": true,
-              "lowest_price": "$4.04"
+              "lowest_price": "$4.04",
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             }
           },
           "availability_verified": "2025-10-14T15:18:33.559692",
@@ -216247,8 +216251,8 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 0.5,
-              "last_updated": "2025-10-13T21:31:49.411893",
+              "usd": 0.52,
+              "last_updated": "2025-10-15T20:39:54.728484",
               "success": true,
               "lowest_price": "$0.50",
               "volume": "189",
@@ -216258,11 +216262,13 @@
                 "lowest_price": "$0.50",
                 "volume": "279",
                 "median_price": "$0.51"
-              }
+              },
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             },
             "stattrak": {
-              "usd": 0.85,
-              "last_updated": "2025-10-13T21:32:12.499032",
+              "usd": 1.03,
+              "last_updated": "2025-10-15T20:39:55.231868",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$0.85",
@@ -216270,7 +216276,9 @@
                 "median_price": "$0.80"
               },
               "success": true,
-              "lowest_price": "$0.85"
+              "lowest_price": "$0.85",
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             }
           },
           "availability_verified": "2025-10-14T15:18:33.559692",
@@ -216288,8 +216296,8 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 0.2,
-              "last_updated": "2025-10-13T21:32:09.178052",
+              "usd": 0.23,
+              "last_updated": "2025-10-15T20:39:55.741233",
               "success": true,
               "lowest_price": "$0.20",
               "volume": "194",
@@ -216299,11 +216307,13 @@
                 "lowest_price": "$0.20",
                 "volume": "236",
                 "median_price": "$0.22"
-              }
+              },
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             },
             "stattrak": {
-              "usd": 0.48,
-              "last_updated": "2025-10-13T21:31:44.440516",
+              "usd": 0.33,
+              "last_updated": "2025-10-15T20:39:56.204078",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$0.48",
@@ -216311,7 +216321,9 @@
                 "median_price": "$0.71"
               },
               "success": true,
-              "lowest_price": "$0.48"
+              "lowest_price": "$0.48",
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             }
           },
           "availability_verified": "2025-10-14T15:18:33.559692",
@@ -216330,7 +216342,7 @@
           "prices": {
             "normal": {
               "usd": 0.14,
-              "last_updated": "2025-10-13T21:31:44.434430",
+              "last_updated": "2025-10-15T20:39:56.638133",
               "success": true,
               "lowest_price": "$0.14",
               "volume": "126",
@@ -216340,11 +216352,13 @@
                 "lowest_price": "$0.14",
                 "volume": "156",
                 "median_price": "$0.15"
-              }
+              },
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             },
             "stattrak": {
-              "usd": 0.63,
-              "last_updated": "2025-10-13T21:31:44.428035",
+              "usd": 0.27,
+              "last_updated": "2025-10-15T20:39:57.091080",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$0.63",
@@ -216352,7 +216366,9 @@
                 "median_price": "$0.40"
               },
               "success": true,
-              "lowest_price": "$0.63"
+              "lowest_price": "$0.63",
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             }
           },
           "availability_verified": "2025-10-14T15:18:33.559692",
@@ -216370,8 +216386,8 @@
           "stattrak_available": true,
           "prices": {
             "normal": {
-              "usd": 0.16,
-              "last_updated": "2025-10-13T21:32:21.508413",
+              "usd": 0.14,
+              "last_updated": "2025-10-15T20:39:57.566173",
               "success": true,
               "lowest_price": "$0.16",
               "volume": "68",
@@ -216381,11 +216397,13 @@
                 "lowest_price": "$0.16",
                 "volume": "109",
                 "median_price": "$0.11"
-              }
+              },
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             },
             "stattrak": {
-              "usd": 0.38,
-              "last_updated": "2025-10-13T21:32:13.563564",
+              "usd": 0.34,
+              "last_updated": "2025-10-15T20:39:58.006295",
               "raw_data": {
                 "success": true,
                 "lowest_price": "$0.38",
@@ -216393,7 +216411,9 @@
                 "median_price": "$1.06"
               },
               "success": true,
-              "lowest_price": "$0.38"
+              "lowest_price": "$0.38",
+              "scraped_from": "csgodatabase_detail_page",
+              "source": "webdriver_scraper"
             }
           },
           "availability_verified": "2025-10-14T15:18:33.559692",
@@ -216404,7 +216424,7 @@
       "metadata": {
         "source": "csgodatabase.com",
         "scraped_at": "2025-10-03T19:02:31.818256",
-        "last_updated": "2025-10-03T19:10:18.017663"
+        "last_updated": "2025-10-15T20:39:58.006295"
       }
     }
   ],
