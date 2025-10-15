@@ -88,7 +88,7 @@ class WebDriverRateLimiter:
     def __init__(self, min_rps: float = 1.0, max_rps: float = 3.0):
         self.min_rps = min_rps
         self.max_rps = max_rps
-        self.last_request_time = 0.0
+        self.last_request_time = 0.0  # First request has NO delay - immediate startup
 
     async def wait_for_next_request(self):
         """Wait for appropriate delay before next request"""
@@ -305,12 +305,12 @@ class HighSpeedScraper:
             self.workers[worker_id] = worker
             self.webdriver_workers.append(worker)
 
-        # Start WebDriver workers immediately
+        # Start WebDriver workers immediately - they begin stealing work ASAP
         for worker in self.webdriver_workers:
             asyncio.create_task(self._webdriver_worker_loop(worker))
 
         logger.info(
-            f"✅ {self.webdriver_count} WebDriver workers started and ready to steal from queue")
+            f"🚀 {self.webdriver_count} WebDriver workers launched - IMMEDIATE work stealing activated!")
 
     async def _proxy_health_check_loop(self):
         """Continuously health check proxies in batches"""
@@ -413,12 +413,12 @@ class HighSpeedScraper:
         self.proxy_workers.append(worker)
         self.active_proxies.add(proxy.url)
 
-        # Start the proxy worker
+        # Start the proxy worker immediately - begins stealing work ASAP
         task = asyncio.create_task(self._proxy_worker_loop(worker))
         self.background_tasks.append(task)
 
         logger.info(
-            f"🚀 Added proxy worker: {worker_id} (Total active: {len(self.active_proxies)})")
+            f"⚡ Added proxy worker: {worker_id} - IMMEDIATE work stealing activated! (Total active: {len(self.active_proxies)})")
 
     async def _worker_management_loop(self):
         """Manage worker health and lifecycle"""
@@ -477,19 +477,20 @@ class HighSpeedScraper:
         logger.warning(f"🗑️ Removed failed worker: {worker_id}")
 
     async def _proxy_worker_loop(self, worker: Worker):
-        """Main loop for proxy workers"""
-        logger.info(f"🔄 Starting proxy worker: {worker.id}")
+        """Main loop for proxy workers - starts immediately"""
+        logger.info(
+            f"⚡ Proxy worker {worker.id} READY - starting immediate work stealing")
 
         while not self.shutdown_event.is_set() and worker.id in self.workers:
             try:
                 if not worker.is_available:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)  # Very brief availability check
                     continue
 
                 # Try to steal an item from the main queue
                 item = self._steal_from_main_queue(worker)
                 if not item:
-                    await asyncio.sleep(0.5)  # Brief pause if no work
+                    await asyncio.sleep(0.1)  # Minimal pause - stay responsive
                     continue
 
                 # Process the item
@@ -515,13 +516,15 @@ class HighSpeedScraper:
                 break
 
     async def _webdriver_worker_loop(self, worker: Worker):
-        """Main loop for WebDriver workers"""
-        logger.info(f"🌐 Starting WebDriver worker: {worker.id}")
+        """Main loop for WebDriver workers - starts scraping immediately"""
+        logger.info(
+            f"🚀 WebDriver worker {worker.id} READY - starting immediate work stealing")
 
         while not self.shutdown_event.is_set() and worker.id in self.workers:
             try:
                 if not worker.is_available:
-                    await asyncio.sleep(1)
+                    # Very brief check for availability
+                    await asyncio.sleep(0.1)
                     continue
 
                 # Prioritize fallback queue over main queue
@@ -530,7 +533,8 @@ class HighSpeedScraper:
                     item = self._steal_from_main_queue(worker)
 
                 if not item:
-                    await asyncio.sleep(0.5)  # Brief pause if no work
+                    # Minimal pause - stay responsive for immediate work
+                    await asyncio.sleep(0.1)
                     continue
 
                 # Process the entire item with WebDriver (all variants at once)
