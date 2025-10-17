@@ -1,6 +1,16 @@
-# CS2 Price Database
+# CS2 Price Database V3.0
 
-A Python application for collecting Steam Community Market prices for CS2 skins with rate limiting and progress tracking.
+A high-performance Python application for collecting Steam Community Market prices for CS2 skins using WebDriver-based scraping with intelligent worker stealing architecture.
+
+## 🚀 V3.0 - WebDriver-Only Architecture
+
+**Major Changes in V3.0:**
+- ✅ **WebDriver-Only**: Removed all proxy and Steam API dependencies
+- ✅ **Simplified Architecture**: Pure Selenium scraping from csgodatabase.com
+- ✅ **Wear Range Validation**: Integration with csgoskins.gg for accurate float ranges
+- ✅ **Enhanced Schema**: Added wear ranges, achievability, and improved listing structure
+- ✅ **Smaller Codebase**: 33% reduction in code size (removed ~3,000 lines)
+- ✅ **More Reliable**: Direct scraping eliminates rate limiting and proxy issues
 
 ## Database Statistics
 
@@ -8,13 +18,7 @@ The CS2 skins database contains:
 
 - **1,361 total skins** across **36 unique weapons**
 - **6,805 variants** (different wear conditions per skin)
-- **13,610 estimated API calls** for complete price collection (Normal + StatTrak)
-- **6,805 estimated API calls** for Normal variants only
-
-### Processing Time Estimates (at 19 calls/minute rate limit)
-
-- **Full collection (Normal + StatTrak)**: ~11.9 hours
-- **Normal variants only**: ~6.0 hours (use `--ignore-stattrak`)
+- Data sources: csgodatabase.com + csgoskins.gg
 
 ### Top 10 Weapons by Skin Count
 
@@ -31,22 +35,42 @@ The CS2 skins database contains:
 
 ## Files
 
-- `steam_api.py` - Steam Market API client with async support and rate limiting
+- `high_speed_scraper.py` - V3.0 WebDriver-only worker stealing scraper
 - `collect_prices.py` - Main price collection system with checkpoint support
-- `cleanup_invalid_variants.py` - Removes skin variants that don't exist on the market ✨
-- `verify_prices.py` - Utility to verify collected prices
+- `csgoskins_scraper.py` - Wear range scraper for csgoskins.gg integration
+- `migrate_database_v3.py` - Database migration script from V2.0 to V3.0
+- `optimized_fallback_scraper.py` - WebDriver pool manager
+- `cleanup_invalid_variants.py` - Removes skin variants that don't exist on the market
 - `data/skins_database.json` - Database of CS2 skins (expected to exist)
 
-## Database Cleanup (NEW!) ✨
+## V3.0 Database Schema
 
-The system now automatically removes skin variants that return `success: True` from the Steam API but have no actual price data. These are variants that technically exist in the API but are **not tradeable or available on the market**.
+### New Fields in V3.0
+
+Each variant now includes:
+
+- **`wear_range`**: `{min: float, max: float}` - Actual float range for wear condition
+- **`achievable`**: `boolean` - Whether this wear condition is obtainable for this skin
+- **`listing`**: `{normal: bool, stattrak: bool}` - Market listing availability
+
+### Removed in V3.0
+
+- ❌ `availability` array (top-level)
+- ❌ `stattrak_availability` array (top-level)  
+- ❌ `available` field (variant-level, replaced by `listing`)
+
+## Database Cleanup ✨
+
+The system automatically removes skin variants that return `success: True` from the API but have no actual price data. These are variants that technically exist but are **not tradeable or available on the market**.
 
 **Cleanup runs automatically:**
+
 - ✅ When price collection completes
 - ✅ When you press Ctrl+C during collection
 - ✅ After missing-only collection
 
 **Quick Start:**
+
 ```bash
 # Just run price collection normally - cleanup is automatic!
 python collect_prices.py
@@ -56,42 +80,63 @@ python cleanup_invalid_variants.py --dry-run  # Preview changes
 python cleanup_invalid_variants.py             # Apply cleanup
 ```
 
-📖 **For detailed information:** See [CLEANUP_QUICKSTART.md](CLEANUP_QUICKSTART.md) or [CLEANUP_GUIDE.md](CLEANUP_GUIDE.md)
-
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Configure environment (optional):
+2. Install Chrome WebDriver (required for V3.0):
+
+```bash
+# Windows (using chocolatey)
+choco install chromedriver
+
+# macOS (using homebrew)
+brew install chromedriver
+
+# Linux
+# Download from https://chromedriver.chromium.org/
+```
+
+3. Configure environment (optional):
+
 ```bash
 cp .env.example .env
 # Edit .env with your preferred settings
-```
-
-3. Configure proxies (optional, to dodge rate limits):
-```bash
-# Simply enable proxies in .env file - they'll be fetched automatically
-USE_PROXIES=true
-
-# Optional: Add backup proxies in case GitHub source fails
-PROXY_LIST=proxy1.example.com:8080,proxy2.example.com:3128
 ```
 
 4. Ensure you have a `data/skins_database.json` file with skin data
 
 ## Usage
 
-### Collect Prices
+### Migrate Database to V3.0 (First Time Only)
+
+If upgrading from V2.0, run the migration script first:
+
+```bash
+# Basic migration with default wear ranges
+python migrate_database_v3.py
+
+# Scrape actual wear ranges from csgoskins.gg (slower but more accurate)
+python migrate_database_v3.py --scrape-wear-ranges
+
+# Preview changes without saving
+python migrate_database_v3.py --dry-run
+```
+
+### Collect Prices (V3.0)
 
 Basic usage:
+
 ```bash
 python collect_prices.py
 ```
 
 With command-line arguments:
+
 ```bash
 # Collect prices for all skins (resumes from checkpoint)
 python collect_prices.py
@@ -117,14 +162,11 @@ python collect_prices.py --limit 5 --ignore-stattrak --no-resume
 # Fastest option: missing prices only + no StatTrak
 python collect_prices.py --missing-only --ignore-stattrak
 
-# Disable proxies (use direct connection)
-python collect_prices.py --noproxy
-
-# Combine: no proxies, no StatTrak, debug mode
-python collect_prices.py --noproxy --ignore-stattrak --debug
+# Enable debug output
+python collect_prices.py --debug
 ```
 
-#### Command-Line Arguments
+#### Command-Line Arguments (V3.0)
 
 - `--limit <number>`: Limit number of skins to process
   - Use small numbers (5-10) for testing
@@ -143,118 +185,68 @@ python collect_prices.py --noproxy --ignore-stattrak --debug
   - Perfect for updating incomplete collections
   - Combines well with other flags
 
-- `--noproxy`: Disable proxy usage (use direct connection)
-  - Forces direct connection to Steam API without proxies
-  - Useful for debugging or when proxies cause issues
-  - Overrides `USE_PROXIES=true` environment variable
+- `--update-availability`: Update weapon availability information
+  - Analyzes which wear conditions and StatTrak variants exist
 
 - `--debug`: Enable detailed debug output
-  - Shows API endpoints, raw responses, and timing information
-  - Useful for troubleshooting API issues
+  - Shows scraping details, timing information, and WebDriver actions
+  - Useful for troubleshooting scraping issues
 
-### Verify Collection
+### Scrape Wear Ranges (V3.0 Feature)
 
-```python
-python verify_prices.py
-```
-
-### Proxy Management
-
-Test and manage your proxy configuration:
+Scrape wear range data from csgoskins.gg:
 
 ```bash
-# Test all configured proxies
-python proxy_test.py test
+# Standalone wear range scraping
+python csgoskins_scraper.py
 
-# Show proxy statistics  
-python proxy_test.py stats
-
-# Benchmark proxy performance
-python proxy_test.py benchmark
-
-# Add a new proxy
-python proxy_test.py add proxy.example.com 8080
-python proxy_test.py add proxy.example.com 8080 --username user --password pass
+# Integrated during migration
+python migrate_database_v3.py --scrape-wear-ranges
 ```
 
-## Features
+## V3.0 Features
 
-- **Rate Limited**: Respects Steam API rate limits (configurable)
-- **Proxy Support**: Automatic proxy rotation to bypass rate limits
-- **Async Support**: Uses aiohttp for efficient concurrent requests
-- **Progress Tracking**: Saves checkpoints to resume interrupted collections
-- **Error Handling**: Graceful handling of network and API errors
+- **WebDriver-Only**: Pure Selenium scraping, no API rate limits
+- **Worker Stealing**: Intelligent task distribution across WebDriver instances  
+- **Priority Queues**: Failed items automatically retry with priority
+- **Wear Range Validation**: Integration with csgoskins.gg for accurate float ranges
+- **Enhanced Schema**: Richer data structure with achievability and wear ranges
+- **Auto-Scaling**: Dynamic WebDriver pool based on system resources
+- **Progress Tracking**: Checkpoints enable resuming interrupted collections
+- **Error Handling**: Graceful handling of network and scraping errors
 - **Logging**: Comprehensive logging with configurable levels
-- **Automatic Cleanup**: Removes invalid skin variants that don't exist on the market (NEW!) ✨
+- **Automatic Cleanup**: Removes invalid skin variants that don't exist on the market
 
-## Environment Variables
+## Environment Variables (V3.0)
 
-### Steam API Configuration
-- `STEAM_MARKET_API_URL`: Steam Market API endpoint (default: Steam's official endpoint)
-- `STEAM_API_RATE_LIMIT`: Max requests per window (default: 19)
-- `STEAM_API_RATE_WINDOW`: Time window in seconds (default: 60)
+### WebDriver Configuration
 
-### Proxy Configuration
-- `USE_PROXIES`: Enable proxy support (default: false)
-- `PROXY_LIST`: Comma-separated list of backup proxies (format: `host:port` or `user:pass@host:port`)
-- `PROXY_FILE`: Path to backup proxy file (default: proxies.txt)
-- `PROXY_HEALTH_CHECK_INTERVAL`: Health check interval in seconds (default: 300)
-- `PROXY_MAX_FAILURES`: Max failures before marking proxy as unhealthy (default: 3)
-- `PROXY_TEST_URL`: URL for testing proxy health (default: https://httpbin.org/ip)
-- `PROXY_TIMEOUT`: Proxy timeout in seconds (default: 10)
+- `WEBDRIVER_POOL_SIZE`: Number of concurrent WebDriver instances (default: 3)
+- `WEBDRIVER_PAGE_LOAD_TIMEOUT`: Page load timeout in seconds (default: 30)
+- `WEBDRIVER_HEADLESS`: Run WebDriver in headless mode (default: true)
 
-## Proxy Configuration
+### Rate Limiting
 
-### Supported Proxy Formats
+- `WEBDRIVER_MIN_RPS`: Minimum requests per second per WebDriver (default: 1.0)
+- `WEBDRIVER_MAX_RPS`: Maximum requests per second per WebDriver (default: 3.0)
 
-The system supports various proxy formats:
+### Data Sources
 
-```
-# HTTP/HTTPS proxies
-http://proxy.example.com:8080
-https://proxy.example.com:8080
+- `CSGODATABASE_BASE_URL`: Base URL for csgodatabase.com (default: https://www.csgodatabase.com)
+- `CSGOSKINS_BASE_URL`: Base URL for csgoskins.gg (default: https://csgoskins.gg)
 
-# Proxies with authentication
-http://username:password@proxy.example.com:8080
+### Data Freshness
 
-# SOCKS proxies
-socks4://proxy.example.com:1080
-socks5://proxy.example.com:1080
+- `PRICE_UPDATE_INTERVAL_HOURS`: Hours before considering prices stale (default: 24)
+- `ENABLE_AUTO_BACKUP`: Create automatic backups (default: true)
+- `BACKUP_RETENTION_DAYS`: Days to keep backups (default: 7)
 
-# Simple format (assumes HTTP)
-proxy.example.com:8080
-username:password@proxy.example.com:8080
-```
-
-### Configuration Methods
-
-1. **Environment Variables** (.env file):
-   ```bash
-   USE_PROXIES=true
-   PROXY_LIST=proxy1.com:8080,user:pass@proxy2.com:3128
-   ```
-
-2. **Proxy File** (proxies.txt):
-   ```
-   # HTTP proxies
-   proxy1.example.com:8080
-   user:pass@proxy2.example.com:3128
-   
-   # SOCKS proxies
-   socks5://proxy3.example.com:1080
-   ```
-
-### Proxy Features
-
-- **Dynamic Proxy Loading**: Automatically fetches fresh proxies from GitHub source
-- **Automatic Rotation**: Proxies are rotated on failure or timeout
-- **Health Monitoring**: Regular health checks remove dead proxies
-- **Failure Recovery**: Failed proxies are automatically retested
-- **Performance Tracking**: Response times and success rates are monitored
-- **Graceful Fallback**: Falls back to backup proxies or direct connection if source fails
+See `.env.example` for complete configuration options.
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.8+
+- selenium >= 4.0.0
 - aiohttp >= 3.8.0
 - python-dotenv >= 0.19.0
+- Chrome WebDriver (chromedriver)

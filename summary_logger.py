@@ -40,8 +40,6 @@ class CollectionStats:
 
     # Network statistics
     rate_limit_hits: int = 0
-    proxy_failures: int = 0
-    dead_proxies_found: int = 0
     network_errors: int = 0
     timeout_errors: int = 0
 
@@ -86,10 +84,6 @@ class SummaryLogger:
         # Response time tracking
         self._response_times: List[float] = []
 
-        # Proxy tracking
-        self._failed_proxies: set = set()
-        self._proxy_stats: Dict[str, Dict] = {}
-
     def initialize_stats(self, env_vars: Dict[str, Any]):
         """Initialize statistics with environment variables"""
         self.stats.env_variables = env_vars
@@ -122,13 +116,6 @@ class SummaryLogger:
     def log_rate_limit_hit(self):
         """Log rate limit hit"""
         self.stats.rate_limit_hits += 1
-
-    def log_proxy_failure(self, proxy_url: str):
-        """Log proxy failure"""
-        self.stats.proxy_failures += 1
-        if proxy_url not in self._failed_proxies:
-            self._failed_proxies.add(proxy_url)
-            self.stats.dead_proxies_found += 1
 
     def log_network_error(self):
         """Log network error"""
@@ -271,10 +258,6 @@ class SummaryLogger:
         report_lines.append("-" * 40)
         report_lines.append(
             f"Rate Limit Hits:       {self.stats.rate_limit_hits:,}")
-        report_lines.append(
-            f"Proxy Failures:        {self.stats.proxy_failures:,}")
-        report_lines.append(
-            f"Dead Proxies Found:    {self.stats.dead_proxies_found:,}")
         report_lines.append(
             f"Network Errors:        {self.stats.network_errors:,}")
         report_lines.append(

@@ -56,16 +56,15 @@ class ScrapeResult:
 class WebDriverPool:
     """Pool of WebDriver instances for concurrent scraping"""
 
-    def __init__(self, pool_size: int = 3, proxies: Optional[List[str]] = None, headless: bool = True):
+    def __init__(self, pool_size: int = 3, headless: bool = True):
         self.pool_size = pool_size
-        self.proxies = proxies or []
         self.headless = headless
         self.drivers = []
         self.driver_queue = Queue()
         self.is_initialized = False
         self.timeout = 15
 
-    def _create_driver(self, proxy: Optional[str] = None) -> webdriver.Chrome:
+    def _create_driver(self) -> webdriver.Chrome:
         """Create a single WebDriver instance with optional proxy"""
         chrome_options = ChromeOptions()
 
@@ -82,11 +81,6 @@ class WebDriverPool:
         chrome_options.add_experimental_option('useAutomationExtension', False)
         chrome_options.add_argument(
             "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-        # Add proxy if provided
-        if proxy:
-            chrome_options.add_argument(f"--proxy-server={proxy}")
-            logger.info(f"🌐 Setting up driver with proxy: {proxy}")
 
         try:
             # Try with webdriver-manager
@@ -125,11 +119,8 @@ class WebDriverPool:
             tasks = []
 
             for i in range(self.pool_size):
-                # Assign proxy if available
-                proxy = self.proxies[i %
-                                     len(self.proxies)] if self.proxies else None
                 task = loop.run_in_executor(
-                    executor, self._create_driver, proxy)
+                    executor, self._create_driver)
                 tasks.append(task)
 
             # Wait for all drivers to be created
@@ -139,8 +130,7 @@ class WebDriverPool:
                 if driver:
                     self.drivers.append(driver)
                     self.driver_queue.put(driver)
-                    proxy_info = f" (proxy: {self.proxies[i % len(self.proxies)]})" if self.proxies else ""
-                    logger.info(f"✅ Driver {i+1} initialized{proxy_info}")
+                    logger.info(f"✅ Driver {i+1} initialized (direct connection)")
 
         self.is_initialized = True
         logger.info(
@@ -176,8 +166,8 @@ class WebDriverPool:
 class OptimizedCSGODatabaseScraper:
     """Optimized scraper with driver pool and queue system"""
 
-    def __init__(self, pool_size: int = 3, proxies: Optional[List[str]] = None, headless: bool = True):
-        self.driver_pool = WebDriverPool(pool_size, proxies, headless)
+    def __init__(self, pool_size: int = 3, headless: bool = True):
+        self.driver_pool = WebDriverPool(pool_size, headless)
         self.request_queue = asyncio.Queue()
         self.result_cache = {}
         self.cache_ttl = 300  # 5 minutes cache

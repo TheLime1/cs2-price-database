@@ -1,34 +1,35 @@
 """
-CS2 Price Collection System V2.0 🚀
-High-Performance Worker Stealing Architecture
+CS2 Price Collection System V3.0 🚀
+WebDriver-Only Architecture
 
-✨ V2.0 FEATURES:
-• 🚀 Worker stealing architecture with proxy and WebDriver workers
+✨ V3.0 FEATURES:
+• 🚀 Pure WebDriver architecture with worker stealing
 • 🔄 Smart priority queue system for optimal resource utilization  
 • 📊 Proper skin-based limits (--limit 2 = 2 skins, not 20 variants)
-• ⚡ Intelligent fallback with WebDriver scraping for failed items
+• ⚡ Intelligent fallback queue for failed items
 • 💾 Advanced checkpointing and graceful shutdown handling
 • 🎯 Dynamic worker management and health monitoring
+• 🌐 csgoskins.gg integration for wear range validation
 
 💡 USAGE:
 High-speed operation with limit:
   python collect_prices.py --missing-only --limit 5
 
-Process all skins with full V2.0 power:
+Process all skins with full V3.0 power:
   python collect_prices.py
 
 See --help for all options and configuration details.
 
-🔧 V2.0 ARCHITECTURE:
-- Worker stealing system with proxy and WebDriver workers
+🔧 V3.0 ARCHITECTURE:
+- WebDriver-only worker stealing system (no proxies, no Steam API)
 - Priority-based task queues for optimal throughput
 - Dynamic worker scaling based on system resources
-- Real-time health monitoring and proxy rotation
+- Real-time health monitoring
 - Enhanced performance through concurrent processing
 
 🌐 DATA SOURCES:
-- Headers: https://raw.githubusercontent.com/TheLime1/Validity/refs/heads/main/data/headers.json
-- Proxies: https://raw.githubusercontent.com/TheLime1/Validity/refs/heads/main/data/http.txt
+- csgodatabase.com: Price data for all wear conditions
+- csgoskins.gg: Wear range validation and achievability
 """
 
 from high_speed_scraper import HighSpeedScraper, SkinItem
@@ -56,11 +57,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class V2PriceCollector:
+class V3PriceCollector:
     """
-    CS2 Price Collection System V2.0
+    CS2 Price Collection System V3.0
 
-    High-performance worker stealing architecture for maximum throughput.
+    WebDriver-only worker stealing architecture for maximum reliability.
     Uses the HighSpeedScraper with intelligent task distribution.
     """
 
@@ -78,34 +79,18 @@ class V2PriceCollector:
         self.database_path = "data/skins_database.json"
         self.checkpoint_path = "price_collection_checkpoint.json"
 
-        # Environment URLs for data sources
-        self.headers_url = os.getenv(
-            'HEADERS_SOURCE_URL',
-            'https://raw.githubusercontent.com/TheLime1/Validity/refs/heads/main/data/headers.json'
-        )
-        self.proxy_url = os.getenv(
-            'PROXY_GITHUB_URL',
-            'https://raw.githubusercontent.com/TheLime1/Validity/refs/heads/main/data/http.txt'
-        )
-
     def configure(self, update_availability: bool = False, ignore_stattrak: bool = False,
-                  noproxy: bool = False, fallback_only: bool = False, debug: bool = False):
+                  debug: bool = False):
         """Configure the collector with command-line flags"""
         self.config = {
             'update_availability': update_availability,
             'ignore_stattrak': ignore_stattrak,
-            'noproxy': noproxy,
-            'fallback_only': fallback_only,
             'debug': debug
         }
 
         # Log configuration
         if debug:
             logger.info("🔧 Debug mode enabled - detailed logging active")
-        if noproxy:
-            logger.info("🚫 Proxy disabled - using direct connections")
-        if fallback_only:
-            logger.info("🔄 Fallback-only mode - skipping Steam API")
         if ignore_stattrak:
             logger.info("⚡ Ignoring StatTrak variants for faster collection")
         if update_availability:
@@ -113,13 +98,12 @@ class V2PriceCollector:
                 "📊 Availability update mode - analyzing variant availability")
 
     async def initialize(self):
-        """Initialize the V2.0 scraping system"""
+        """Initialize the V3.0 scraping system"""
         print("🚀" + "="*80)
-        print("🚀 CS2 PRICE COLLECTION SYSTEM V2.0")
-        print("🚀 High-performance worker stealing architecture")
+        print("🚀 CS2 PRICE COLLECTION SYSTEM V3.0")
+        print("🚀 WebDriver-only worker stealing architecture")
         print("🚀" + "="*80)
-        print(f"🌐 Headers Source: {self.headers_url}")
-        print(f"🌐 Proxy Source: {self.proxy_url}")
+        print("🌐 Data Sources: csgodatabase.com + csgoskins.gg")
         print("🚀" + "="*80)
 
         await self.scraper.initialize()
@@ -367,16 +351,14 @@ class V2PriceCollector:
 
     async def collect_prices(self, missing_only: bool = False, limit: Optional[int] = None, resume: bool = True,
                              update_availability: bool = False, ignore_stattrak: bool = False,
-                             noproxy: bool = False, fallback_only: bool = False, debug: bool = False):
-        """Main collection method using V2.0 worker stealing architecture"""
+                             debug: bool = False):
+        """Main collection method using V3.0 WebDriver-only architecture"""
 
         # Configure the collector with the provided flags
-        self.configure(update_availability, ignore_stattrak,
-                       noproxy, fallback_only, debug)
+        self.configure(update_availability, ignore_stattrak, debug)
 
         # Configure the scraper with relevant flags
-        self.scraper.configure(
-            noproxy=noproxy, fallback_only=fallback_only, ignore_stattrak=ignore_stattrak)
+        self.scraper.configure(ignore_stattrak=ignore_stattrak)
 
         self.stats['start_time'] = datetime.now()
 
@@ -446,15 +428,28 @@ class V2PriceCollector:
         logger.info(
             f"Total items to process: {self.scraper.stats['total_items']}")
 
-        # Start the V2.0 high-speed scraping
-        logger.info("Starting CS2 Price Collection System V2.0")
-        await self.scraper.start_scraping()
+        # Start the V3.0 high-speed scraping
+        logger.info("Starting CS2 Price Collection System V3.0")
+        
+        # Convert SkinItem objects to dictionary format for the scraper
+        items_data = []
+        for item in missing_items:
+            items_data.append({
+                'id': item.id,
+                'weapon': item.weapon,
+                'skin_name': item.skin_name,
+                'full_name': item.full_name,
+                'detail_url': item.detail_url,
+                'variants': item.variants
+            })
+        
+        await self.scraper.process_items(items_data)
 
         # Wait for completion (the scraper handles its own completion logic)
 
     async def shutdown(self):
-        """Graceful shutdown of the V2.0 system"""
-        logger.info("Shutting down V2.0 system...")
+        """Graceful shutdown of the V3.0 system"""
+        logger.info("Shutting down V3.0 system...")
         await self.scraper.shutdown()
 
         self.stats['end_time'] = datetime.now()
@@ -464,7 +459,7 @@ class V2PriceCollector:
         duration = self.stats['end_time'] - self.stats['start_time']
 
         logger.info(
-            f"CS2 PRICE COLLECTION V2.0 COMPLETED in {duration.total_seconds():.2f} seconds!")
+            f"CS2 PRICE COLLECTION V3.0 COMPLETED in {duration.total_seconds():.2f} seconds!")
 
         # Create a proper CollectionStats object for V2.0 system
         from summary_logger import CollectionStats
@@ -497,36 +492,33 @@ class V2PriceCollector:
 
 
 async def main():
-    """Main entry point for V2.0 price collection system"""
+    """Main entry point for V3.0 price collection system"""
 
     parser = argparse.ArgumentParser(
-        description="CS2 Price Collection System V2.0 - High-Performance Worker Stealing Architecture",
+        description="CS2 Price Collection System V3.0 - WebDriver-Only Architecture",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-🚀 CS2 PRICE COLLECTION SYSTEM V2.0 🚀
+🚀 CS2 PRICE COLLECTION SYSTEM V3.0 🚀
 
 EXAMPLES:
   python collect_prices.py --missing-only --limit 5
-    Process only missing prices for first 5 skins with V2.0 architecture
+    Process only missing prices for first 5 skins with V3.0 architecture
     
   python collect_prices.py --missing-only  
-    Process all missing prices with V2.0 worker stealing system
+    Process all missing prices with V3.0 worker stealing system
     
   python collect_prices.py --limit 10
-    Process first 10 skins completely with V2.0 power
+    Process first 10 skins completely with V3.0 power
     
   python collect_prices.py
-    Full V2.0 processing of entire database
+    Full V3.0 processing of entire database
 
-V2.0 FEATURES:
-• Worker stealing architecture with proxy and WebDriver workers
+V3.0 FEATURES:
+• WebDriver-only worker stealing architecture (no proxies, no Steam API)
 • Smart priority queues for optimal resource utilization
 • Dynamic worker scaling and health monitoring
-• Enhanced performance through concurrent processing
-
-ENVIRONMENT VARIABLES:
-  HEADERS_SOURCE_URL - Custom headers source URL
-  PROXY_GITHUB_URL   - Custom proxy source URL
+• csgoskins.gg integration for wear range validation
+• Enhanced reliability through direct scraping
         """
     )
 
@@ -542,12 +534,8 @@ ENVIRONMENT VARIABLES:
                         help='Update weapon availability information to detect which wear conditions and StatTrak variants actually exist')
     parser.add_argument('--ignore-stattrak', action='store_true',
                         help='Skip StatTrak variants to speed up collection')
-    parser.add_argument('--noproxy', action='store_true',
-                        help='Disable proxy usage and use direct connection to Steam API')
-    parser.add_argument('--fallback-only', action='store_true',
-                        help='Skip Steam API entirely and use only fallback scraping method')
     parser.add_argument('--debug', action='store_true',
-                        help='Enable detailed debug output including API endpoints and responses')
+                        help='Enable detailed debug output including scraping details and responses')
 
     args = parser.parse_args()
 
@@ -556,11 +544,9 @@ ENVIRONMENT VARIABLES:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.getLogger('high_speed_scraper').setLevel(logging.DEBUG)
         logging.getLogger('optimized_fallback_scraper').setLevel(logging.DEBUG)
-        logging.getLogger('steam_api').setLevel(logging.DEBUG)
-        logging.getLogger('proxy_manager').setLevel(logging.DEBUG)
 
     # Create collector
-    collector = V2PriceCollector()
+    collector = V3PriceCollector()
 
     # Create shutdown event for proper signal handling
     shutdown_event = asyncio.Event()
@@ -581,7 +567,7 @@ ENVIRONMENT VARIABLES:
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        # Initialize V2.0 system
+        # Initialize V3.0 system
         await collector.initialize()
 
         # Create collection task
@@ -591,8 +577,6 @@ ENVIRONMENT VARIABLES:
             resume=not args.no_resume,
             update_availability=args.update_availability,
             ignore_stattrak=args.ignore_stattrak,
-            noproxy=args.noproxy,
-            fallback_only=args.fallback_only,
             debug=args.debug
         ))
 
@@ -627,5 +611,5 @@ if __name__ == "__main__":
     # Ensure logs directory exists
     os.makedirs('logs', exist_ok=True)
 
-    # Run the V2.0 system
+    # Run the V3.0 system
     asyncio.run(main())

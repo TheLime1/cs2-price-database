@@ -1,51 +1,47 @@
-# CS2 Skins Database Structure Guide
+# CS2 Skins Database Structure Guide - V3.0
 
 ## Overview
-The CS2 skins database is stored in JSON format and contains comprehensive information about Counter-Strike 2 weapon skins, including their variants, prices, and metadata.
+
+The CS2 skins database V3.0 is stored in JSON format and contains comprehensive information about Counter-Strike 2 weapon skins, including their variants, prices, wear ranges, and achievability data.
+
+## V3.0 Changes
+
+**What's New:**
+
+- ✅ **`wear_range`**: Actual min/max float values for each wear condition
+- ✅ **`achievable`**: Boolean flag indicating if a wear condition is obtainable
+- ✅ **`listing`**: New structure replacing `available` with `{normal, stattrak}` format
+- ❌ **Removed**: `availability` and `stattrak_availability` arrays (top-level)
+- ❌ **Removed**: `available` field (variant-level, replaced by `listing`)
 
 ## Database File Location
+
 - **Main Database**: `data/skins_database.json`
-- **Backup Files**: `data/skins_database.json.backup_YYYYMMDD_HHMMSS`
+- **Backup Files**: `backups/skins_database_v2_backup_YYYYMMDD_HHMMSS.json`
 
 ## Root Structure
 
 ```json
 {
-  "version": "1.0",
-  "generated_at": "2025-10-13T19:10:18.018190",
-  "total_skins": 1361,
-  "data_status": {
-    "base_info": "complete",
-    "wear_availability": "assumed_all (needs verification)",
-    "stattrak_availability": "assumed_all (needs verification)", 
-    "prices": "not_fetched (all set to 0)",
-    "last_price_update": "2025-10-05T18:20:52.764828"
-  },
+  "version": "3.0",
+  "migrated_at": "2025-10-17T12:00:00.000000",
+  "migration_notes": "Migrated from V2.0 to V3.0 schema",
+  "last_updated": "2025-10-17T12:30:00.000000",
   "skins": [...]
 }
 ```
 
 ### Root Level Fields
 
-| Field          | Type              | Description                             |
-| -------------- | ----------------- | --------------------------------------- |
-| `version`      | string            | Database schema version                 |
-| `generated_at` | string (ISO 8601) | When the database was initially created |
-| `total_skins`  | integer           | Total number of unique skins            |
-| `data_status`  | object            | Status of different data categories     |
-| `skins`        | array             | Array of skin objects                   |
+| Field              | Type              | Description                             |
+|--------------------|-------------------|-----------------------------------------|
+| `version`          | string            | Database schema version (3.0)           |
+| `migrated_at`      | string (ISO 8601) | When database was migrated to V3.0      |
+| `migration_notes`  | string            | Migration details                       |
+| `last_updated`     | string (ISO 8601) | Last price collection update            |
+| `skins`            | array             | Array of skin objects                   |
 
-### Data Status Object
-
-| Field                   | Type              | Description                      |
-| ----------------------- | ----------------- | -------------------------------- |
-| `base_info`             | string            | Status of basic skin information |
-| `wear_availability`     | string            | Status of wear condition data    |
-| `stattrak_availability` | string            | Status of StatTrak variant data  |
-| `prices`                | string            | Status of price collection       |
-| `last_price_update`     | string (ISO 8601) | Timestamp of last price update   |
-
-## Skin Object Structure
+## Skin Object Structure (V3.0)
 
 Each skin in the `skins` array has the following structure:
 
@@ -67,7 +63,7 @@ Each skin in the `skins` array has the following structure:
 ### Skin Fields
 
 | Field          | Type   | Description                                |
-| -------------- | ------ | ------------------------------------------ |
+|----------------|--------|--------------------------------------------|
 | `id`           | string | Unique identifier (kebab-case)             |
 | `weapon`       | string | Weapon name (e.g., "AK-47", "AWP")         |
 | `skin_name`    | string | Skin pattern name                          |
@@ -79,218 +75,346 @@ Each skin in the `skins` array has the following structure:
 | `detail_url`   | string | URL to detailed skin information           |
 | `variants`     | array  | Array of wear condition variants           |
 
-## Variant Object Structure
+**Removed in V3.0:**
+
+- ❌ `availability` - Array of available wear conditions
+- ❌ `stattrak_availability` - Array of StatTrak-available wear conditions
+
+## Variant Object Structure (V3.0)
 
 Each variant represents a different wear condition of the skin:
 
 ```json
 {
   "wear": "Factory New",
-  "wear_short": "FN", 
-  "float_range": [0.0, 0.07],
-  "available": true,
-  "stattrak_available": true,
-  "has_normal_listings": true,
-  "has_stattrak_listings": true,
-  "availability_verified": "2025-10-13T23:38:54.688000",
+  "image": "https://...image_url...",
+  "wear_range": {
+    "min": 0.00,
+    "max": 0.07
+  },
+  "achievable": true,
+  "listing": {
+    "normal": true,
+    "stattrak": true
+  },
   "prices": {
     "normal": {
       "usd": 824.14,
-      "last_updated": "2025-10-04T14:09:04.547652",
-      "raw_data": {
-        "success": true,
-        "lowest_price": "$824.14"
-      },
-      "success": true,
-      "lowest_price": "$824.14"
+      "last_updated": "2025-10-17T14:09:04.547652"
     },
     "stattrak": {
-      "usd": 1515.59,
-      "last_updated": "2025-10-04T14:09:05.275373", 
-      "raw_data": {
-        "success": true,
-        "lowest_price": "$1,515.59"
-      }
+      "usd": 1250.50,
+      "last_updated": "2025-10-17T14:09:05.123456"
     }
-  }
+  },
+  "has_normal_listings": true,
+  "has_stattrak_listings": true
 }
 ```
 
 ### Variant Fields
 
-| Field                   | Type              | Description                                      |
-| ----------------------- | ----------------- | ------------------------------------------------ |
-| `wear`                  | string            | Full wear condition name                         |
-| `wear_short`            | string            | Abbreviated wear condition                       |
-| `float_range`           | array             | [min, max] float values                          |
-| `available`             | boolean           | Whether variant exists on marketplace            |
-| `stattrak_available`    | boolean           | Whether StatTrak version exists                  |
-| `has_normal_listings`   | boolean           | Whether normal variant has active listings       |
-| `has_stattrak_listings` | boolean           | Whether StatTrak variant has active listings     |
-| `availability_verified` | string (ISO 8601) | When availability was last verified via scraping |
-| `prices`                | object            | Price information for normal and StatTrak        |
+| Field                   | Type              | Description                                |
+|-------------------------|-------------------|--------------------------------------------|
+| `wear`                  | string            | Wear condition name                        |
+| `image`                 | string            | URL to skin image                          |
+| `wear_range` ✨         | object            | Min/max float values for this condition    |
+| `achievable` ✨         | boolean           | Whether this wear is obtainable            |
+| `listing` ✨            | object            | Listing availability structure             |
+| `prices`                | object            | Price data for normal and StatTrak         |
+| `has_normal_listings`   | boolean           | True if normal variant has active listings |
+| `has_stattrak_listings` | boolean           | True if StatTrak variant has listings      |
 
-## Price Object Structure
+**New in V3.0:**
 
-Price objects contain current market data:
+- ✨ `wear_range`: Actual float range from csgoskins.gg or defaults
+- ✨ `achievable`: Indicates if wear condition is possible for this skin
+- ✨ `listing`: Replaces `available` with structured format
+
+**Removed in V3.0:**
+
+- ❌ `available` - Replaced by `listing.normal`
+- ❌ `stattrak_available` - Replaced by `listing.stattrak`
+- ❌ `float_range` - Replaced by `wear_range`
+- ❌ `wear_short` - Not needed in V3.0
+
+### Wear Range Object (V3.0) ✨
 
 ```json
 {
-  "usd": 824.14,
-  "last_updated": "2025-10-04T14:09:04.547652",
-  "raw_data": {
-    "success": true,
-    "lowest_price": "$824.14",
-    "median_price": "$850.00",
-    "volume": "42",
-    "source": "steam_api"
+  "min": 0.00,
+  "max": 0.07
+}
+```
+
+| Field | Type  | Description                              |
+|-------|-------|------------------------------------------|
+| `min` | float | Minimum float value for this condition   |
+| `max` | float | Maximum float value for this condition   |
+
+**Standard CS2 Wear Ranges:**
+
+| Wear Condition   | Min Float | Max Float |
+|------------------|-----------|-----------|
+| Factory New      | 0.00      | 0.07      |
+| Minimal Wear     | 0.07      | 0.15      |
+| Field-Tested     | 0.15      | 0.38      |
+| Well-Worn        | 0.38      | 0.45      |
+| Battle-Scarred   | 0.45      | 1.00      |
+
+**Note**: Some skins have restricted ranges (e.g., AWP Asiimov is only FT, WW, BS).
+
+### Listing Object (V3.0) ✨
+
+```json
+{
+  "normal": true,
+  "stattrak": false
+}
+```
+
+| Field      | Type    | Description                              |
+|------------|---------|------------------------------------------|
+| `normal`   | boolean | Normal variant available on market       |
+| `stattrak` | boolean | StatTrak variant available on market     |
+
+### Prices Object
+
+```json
+{
+  "normal": {
+    "usd": 824.14,
+    "last_updated": "2025-10-17T14:09:04.547652"
   },
-  "success": true,
-  "lowest_price": "$824.14"
+  "stattrak": {
+    "usd": 1250.50,
+    "last_updated": "2025-10-17T14:09:05.123456"
+  }
 }
 ```
 
-### Price Fields
+| Field          | Type              | Description                    |
+|----------------|-------------------|--------------------------------|
+| `normal`       | object            | Normal variant price data      |
+| `stattrak`     | object            | StatTrak variant price data    |
+| `usd`          | float             | Price in USD                   |
+| `last_updated` | string (ISO 8601) | When price was last collected  |
 
-| Field          | Type              | Description                        |
-| -------------- | ----------------- | ---------------------------------- |
-| `usd`          | float             | Price in USD                       |
-| `last_updated` | string (ISO 8601) | When price was last fetched        |
-| `raw_data`     | object            | Raw API response data              |
-| `success`      | boolean           | Whether price fetch was successful |
-| `lowest_price` | string            | Formatted price string             |
+## Complete Example (V3.0)
 
-### Raw Data Fields
-
-| Field          | Type    | Description                                   |
-| -------------- | ------- | --------------------------------------------- |
-| `success`      | boolean | API request success status                    |
-| `lowest_price` | string  | Lowest market price                           |
-| `median_price` | string  | Median market price (optional)                |
-| `volume`       | string  | Trading volume (optional)                     |
-| `source`       | string  | Data source ("steam_api", "fallback_scraper") |
-
-## Availability Detection System
-
-### Enhanced Fallback Mechanism
-
-The database now includes comprehensive availability detection powered by the fallback scraper system. This system analyzes actual marketplace data to determine:
-
-#### Availability Fields
-
-- **`available`**: Indicates if the wear condition exists for the weapon (e.g., some weapons don't have Factory New condition)
-- **`stattrak_available`**: Indicates if StatTrak variant exists for that wear condition
-- **`has_normal_listings`**: Whether there are active marketplace listings for the normal variant
-- **`has_stattrak_listings`**: Whether there are active marketplace listings for the StatTrak variant
-- **`availability_verified`**: Timestamp when availability was last verified through scraping
-
-#### Detection Process
-
-1. **Scraping Analysis**: The fallback scraper examines the marketplace page structure
-2. **Column Detection**: Identifies which wear conditions and StatTrak variants have columns in the price table
-3. **Listing Verification**: Checks if actual prices exist (indicating active listings)
-4. **Availability Mapping**: Maps findings to boolean availability flags
-
-#### Examples
-
-**UMP-45 Grand Prix** (Limited availability):
 ```json
 {
-  "wear": "Factory New",
-  "available": false,
-  "stattrak_available": false,
-  "has_normal_listings": false,
-  "has_stattrak_listings": false
+  "version": "3.0",
+  "migrated_at": "2025-10-17T12:00:00.000000",
+  "last_updated": "2025-10-17T14:30:00.000000",
+  "skins": [
+    {
+      "id": "ak-47-redline",
+      "weapon": "AK-47",
+      "skin_name": "Redline",
+      "full_name": "AK-47 Redline",
+      "rarity": "Classified",
+      "rarity_color": "Pink",
+      "collection": "The Phoenix Collection",
+      "introduced": "20 February 2014",
+      "detail_url": "https://www.csgodatabase.com/skins/ak-47-redline/",
+      "variants": [
+        {
+          "wear": "Factory New",
+          "image": "https://...image_url...",
+          "wear_range": {
+            "min": 0.10,
+            "max": 0.15
+          },
+          "achievable": true,
+          "listing": {
+            "normal": true,
+            "stattrak": true
+          },
+          "prices": {
+            "normal": {
+              "usd": 124.50,
+              "last_updated": "2025-10-17T14:09:04.547652"
+            },
+            "stattrak": {
+              "usd": 285.75,
+              "last_updated": "2025-10-17T14:09:05.123456"
+            }
+          },
+          "has_normal_listings": true,
+          "has_stattrak_listings": true
+        },
+        {
+          "wear": "Minimal Wear",
+          "image": "https://...image_url...",
+          "wear_range": {
+            "min": 0.10,
+            "max": 0.26
+          },
+          "achievable": true,
+          "listing": {
+            "normal": true,
+            "stattrak": true
+          },
+          "prices": {
+            "normal": {
+              "usd": 18.25,
+              "last_updated": "2025-10-17T14:10:15.234567"
+            },
+            "stattrak": {
+              "usd": 45.80,
+              "last_updated": "2025-10-17T14:10:16.345678"
+            }
+          },
+          "has_normal_listings": true,
+          "has_stattrak_listings": true
+        }
+      ]
+    }
+  ]
 }
 ```
 
-**AK-47 The Oligarch** (Missing StatTrak Factory New):
-```json
-{
-  "wear": "Factory New", 
-  "available": true,
-  "stattrak_available": false,
-  "has_normal_listings": true,
-  "has_stattrak_listings": false
+## Migration from V2.0 to V3.0
+
+### Automatic Migration
+
+Use the migration script to automatically convert your database:
+
+```bash
+# Basic migration with default wear ranges
+python migrate_database_v3.py
+
+# Scrape actual wear ranges (recommended)
+python migrate_database_v3.py --scrape-wear-ranges
+
+# Preview changes first
+python migrate_database_v3.py --dry-run
+```
+
+### Manual Migration
+
+If you need to manually migrate, here are the transformations:
+
+**1. Add wear_range to each variant:**
+
+```python
+variant['wear_range'] = {
+    'min': 0.00,  # From csgoskins.gg or defaults
+    'max': 0.07
 }
 ```
 
-### Proxy Management & Reliability
+**2. Add achievable field:**
 
-The system implements advanced proxy retry mechanisms to ensure no weapons are skipped due to network issues:
+```python
+variant['achievable'] = True  # From csgoskins.gg or assume True
+```
 
-- **Multiple Retry Attempts**: Up to 3 attempts per weapon with different proxy connections
-- **Automatic Proxy Rotation**: Switches to different proxies on failure
-- **Rate Limiting**: Prevents overwhelming target servers
-- **Comprehensive Error Handling**: Logs detailed failure information for troubleshooting
+**3. Transform available → listing:**
 
-## Wear Conditions
+```python
+variant['listing'] = {
+    'normal': variant.get('available', False),
+    'stattrak': variant.get('stattrak_available', False)
+}
+del variant['available']
+del variant['stattrak_available']
+```
 
-Standard CS2 wear conditions in order from best to worst:
+**4. Remove top-level arrays:**
 
-1. **Factory New (FN)** - Float: 0.00 - 0.07
-2. **Minimal Wear (MW)** - Float: 0.07 - 0.15  
-3. **Field-Tested (FT)** - Float: 0.15 - 0.38
-4. **Well-Worn (WW)** - Float: 0.38 - 0.45
-5. **Battle-Scarred (BS)** - Float: 0.45 - 1.00
+```python
+del skin['availability']
+del skin['stattrak_availability']
+```
 
-## Rarity Tiers
+## Data Sources (V3.0)
 
-CS2 skin rarities from most common to rarest:
+- **Price Data**: csgodatabase.com (WebDriver scraping)
+- **Wear Ranges**: csgoskins.gg (WebDriver scraping)
+- **Achievability**: csgoskins.gg (wear range validation)
+- **Base Information**: csgodatabase.com
 
-1. **Consumer Grade** (White) - 79.92%
-2. **Industrial Grade** (Light Blue) - 15.98% 
-3. **Mil-Spec** (Blue) - 3.2%
-4. **Restricted** (Purple) - 0.64%
-5. **Classified** (Pink) - 0.2% 
-6. **Covert** (Red) - 0.04%
-7. **Special Items** (Gold/Yellow) - 0.02%
+## Validation
 
-## Market Hash Names
+### Required Fields
 
-Market hash names are used for Steam Market API calls:
+Every skin must have:
 
-- **Normal**: `{weapon} | {skin_name} ({wear_condition})`
-- **StatTrak**: `StatTrak™ {weapon} | {skin_name} ({wear_condition})`
+- ✅ `id`, `weapon`, `skin_name`, `full_name`
+- ✅ `detail_url`
+- ✅ `variants` array (at least one)
 
-### Examples:
-- `"AK-47 | Redline (Field-Tested)"`
-- `"StatTrak™ AWP | Lightning Strike (Factory New)"`
+Every variant must have:
 
-## Invalid Variants
+- ✅ `wear`
+- ✅ `wear_range` with `min` and `max`
+- ✅ `achievable` boolean
+- ✅ `listing` with `normal` and `stattrak`
+- ✅ `prices` object
 
-Some variants may be marked as invalid during cleanup:
+### Data Integrity
 
-- Variants that return `"success": true` but no price data
-- Items that exist in API but aren't tradeable/marketable
-- Region-restricted or discontinued items
+- Float values in `wear_range` must be between 0.0 and 1.0
+- `min` must be less than `max` in `wear_range`
+- Prices must be non-negative numbers
+- Timestamps must be valid ISO 8601 format
 
-These are automatically removed during database cleanup.
+## Performance Considerations
 
-## File Size and Performance
+### File Size
 
-- **Current Size**: ~15-25 MB (compressed)
-- **Total Records**: 1,361 skins × ~5 variants = ~6,805 price entries
-- **Expected Growth**: Minimal (new skins added infrequently)
+- **V2.0**: ~8-10 MB (1,361 skins)
+- **V3.0**: ~9-11 MB (added wear_range data)
 
-## Backup Strategy
+### Loading Time
 
-- Automatic backups created before cleanup operations
-- Timestamped backup files: `skins_database.json.backup_20251013_143022`
-- Manual backups recommended before major updates
+- Python `json.load()`: ~0.5-1.0 seconds
+- Recommended: Load once at startup, keep in memory
 
-## Data Validation
+### Backup Strategy
 
-The system validates:
-- JSON structure integrity
-- Required field presence
-- Price data format and ranges  
-- Date format consistency
-- Skin-variant relationships
+- Automatic backups before migration
+- Recommended: Daily backups during active collection
+- Keep at least 7 days of backups
 
-## API Rate Considerations
+## Common Queries
 
-- Each price update requires 2 API calls (normal + StatTrak)
-- Total API calls for full update: ~13,610 requests
-- Estimated time at 19 calls/minute: ~12.0 hours
-- Use `--ignore-stattrak` to halve the time: ~6.0 hours
+### Find all skins for a weapon
+
+```python
+ak47_skins = [s for s in data['skins'] if s['weapon'] == 'AK-47']
+```
+
+### Find achievable wear conditions for a skin
+
+```python
+achievable_wears = [
+    v['wear'] for v in skin['variants']
+    if v['achievable']
+]
+```
+
+### Find skins with StatTrak listings
+
+```python
+stattrak_skins = [
+    s for s in data['skins']
+    if any(v['listing']['stattrak'] for v in s['variants'])
+]
+```
+
+### Get wear range for specific condition
+
+```python
+fn_variant = next(v for v in skin['variants'] if v['wear'] == 'Factory New')
+min_float = fn_variant['wear_range']['min']
+max_float = fn_variant['wear_range']['max']
+```
+
+## See Also
+
+- [Command Line Flags](command_line_flags.md) - Collection options
+- [README.md](../README.md) - Main documentation
+- Migration script: `migrate_database_v3.py`
