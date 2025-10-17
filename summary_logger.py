@@ -5,9 +5,9 @@ Generates comprehensive summary reports at the end of collection runs
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import logging
 
 logger = logging.getLogger(__name__)
@@ -317,35 +317,74 @@ class SummaryLogger:
         return "\\n".join(report_lines)
 
     def save_summary(self):
-        """Save summary report to file"""
+        """Save summary report to file (text and JSON)"""
         try:
             summary_report = self.generate_summary_report()
 
+            # Save text summary (write mode - overwrites previous)
             with open(self.summary_file, 'w', encoding='utf-8') as f:
                 f.write(summary_report)
 
-            logger.info(f"Summary report saved to: {self.summary_file}")
+            logger.info(f"📄 Summary report saved to: {self.summary_file}")
 
-            # Also save as JSON for programmatic access
-            json_file = self.summary_file.replace('.txt', '.json')
-            with open(json_file, 'w', encoding='utf-8') as f:
-                # Convert stats to JSON-serializable format
-                stats_dict = asdict(self.stats)
-                # Convert datetime objects to strings
-                if stats_dict['start_time']:
-                    stats_dict['start_time'] = stats_dict['start_time'].isoformat()
-                if stats_dict['end_time']:
-                    stats_dict['end_time'] = stats_dict['end_time'].isoformat()
-                if stats_dict['interruption_time']:
-                    stats_dict['interruption_time'] = stats_dict['interruption_time'].isoformat(
+            # Save JSON summary with only important metrics (write mode - overwrites previous)
+            json_file = os.path.join(self.log_dir, "summary_stats.json")
+
+            # Create clean summary dictionary with only important stats
+            summary_data = {
+                "collection_summary": {
+                    "start_time": self.stats.start_time.isoformat() if self.stats.start_time else None,
+                    "end_time": self.stats.end_time.isoformat() if self.stats.end_time else None,
+                    "total_duration_seconds": round(self.stats.total_duration, 2) if self.stats.total_duration else 0,
+                    "collection_mode": self.stats.collection_mode,
+                    "resumed_from_checkpoint": self.stats.resumed_from_checkpoint,
+                    "interrupted_by_user": self.stats.interrupted_by_user,
+                    "graceful_shutdown": self.stats.graceful_shutdown
+                },
+                "skins_and_variants": {
+                    "total_skins_processed": self.stats.total_skins_processed,
+                    "total_variants_processed": self.stats.total_variants_processed
+                },
+                "success_metrics": {
+                    "steam_api_success": self.stats.steam_api_success_count,
+                    "fallback_scraper_success": self.stats.fallback_scraper_success_count,
+                    "total_success": self.stats.total_success_count,
+                    "success_rate_percent": round(
+                        (self.stats.total_success_count / max(1,
+                         self.stats.total_success_count + self.stats.total_failure_count)) * 100,
+                        2
                     )
+                },
+                "failure_metrics": {
+                    "steam_api_failures": self.stats.steam_api_failure_count,
+                    "fallback_scraper_failures": self.stats.fallback_scraper_failure_count,
+                    "total_failures": self.stats.total_failure_count,
+                    "rate_limit_hits": self.stats.rate_limit_hits,
+                    "network_errors": self.stats.network_errors,
+                    "timeout_errors": self.stats.timeout_errors
+                },
+                "performance_metrics": {
+                    "requests_per_minute": round(self.stats.requests_per_minute, 2),
+                    "average_response_time_seconds": round(self.stats.average_response_time, 2),
+                    "fastest_response_seconds": round(self.stats.fastest_response, 2),
+                    "slowest_response_seconds": round(self.stats.slowest_response, 2)
+                },
+                "data_quality": {
+                    "invalid_variants_removed": self.stats.invalid_variants_removed,
+                    "database_backups_created": self.stats.database_backups_created,
+                    "checkpoint_saves": self.stats.checkpoint_saves
+                },
+                "generated_at": datetime.now().isoformat()
+            }
 
-                json.dump(stats_dict, f, indent=2, ensure_ascii=False)
+            # Write JSON in 'w' mode (overwrites previous)
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(summary_data, f, indent=2, ensure_ascii=False)
 
-            logger.info(f"Summary JSON saved to: {json_file}")
+            logger.info(f"📊 Summary JSON saved to: {json_file}")
 
         except Exception as e:
-            logger.error(f"Failed to save summary report: {e}")
+            logger.error(f"❌ Failed to save summary report: {e}")
 
     def print_summary(self):
         """Print summary report to console"""

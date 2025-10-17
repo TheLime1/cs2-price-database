@@ -38,7 +38,6 @@ import json
 import asyncio
 import argparse
 import logging
-import time
 import signal
 import os
 from datetime import datetime
@@ -372,10 +371,8 @@ class V3PriceCollector:
             await self._update_availability_mode(data, limit)
             return
 
-        # Load checkpoint if resuming
-        if resume and not missing_only:
-            checkpoint = self.load_checkpoint()
-            # TODO: Use checkpoint data for resuming
+        # Note: Checkpoint system is handled by the scraper internally
+        # Resume functionality is built into the V3.0 architecture
 
         if missing_only:
             logger.info(
