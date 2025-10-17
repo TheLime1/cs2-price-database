@@ -46,6 +46,8 @@ class SkinWearData:
     skin_name: str
     weapon: str
     wear_ranges: List[WearRange]
+    # Overall min/max for the skin
+    total_wear_range: Optional[Tuple[float, float]]
     scraped_at: str
 
 
@@ -323,6 +325,79 @@ class CSGOSkinsGGScraper:
 
         return wear_ranges
 
+    def _extract_total_wear_range(self) -> Optional[Tuple[float, float]]:
+        """Extract the overall wear range (e.g., '0.00 to 0.08') from the page"""
+        try:
+            # Look for text that matches: "The float value of the {weapon} | {skin} ranges from X to Y"
+            # Or find the Wear Range section with min/max indicators
+
+            # Method 1: Try to find the description text
+            try:
+                description_element = self.driver.find_element(
+                    By.XPATH,
+                    "//*[contains(text(), 'float value') and contains(text(), 'ranges from')]"
+                )
+                text = description_element.text.strip()
+
+                # Extract numbers: "ranges from 0.00 to 0.08"
+                import re
+                match = re.search(r'ranges from ([\d.]+) to ([\d.]+)', text)
+                if match:
+                    min_val = float(match.group(1))
+                    max_val = float(match.group(2))
+                    logger.debug(
+                        f"   📊 Found total wear range: {min_val} - {max_val}")
+                    return (min_val, max_val)
+            except NoSuchElementException:
+                pass
+
+            # Method 2: Look for the visual wear range indicator
+            # Find elements near "Wear Range" heading that contain float values
+            try:
+                # Look for the Wear Range section
+                wear_heading = self.driver.find_element(
+                    By.XPATH, "//h2[contains(text(), 'Wear Range')]"
+                )
+
+                # Get the parent container
+                parent = wear_heading.find_element(By.XPATH, "./..")
+
+                # Find all elements with float values (contains decimal points)
+                float_elements = parent.find_elements(
+                    By.XPATH, ".//*[contains(text(), '0.')]"
+                )
+
+                # Extract all float values
+                float_values = []
+                for elem in float_elements:
+                    text = elem.text.strip()
+                    try:
+                        # Try to extract just the float value
+                        import re
+                        matches = re.findall(r'\b0\.\d+\b', text)
+                        for match in matches:
+                            float_values.append(float(match))
+                    except ValueError:
+                        continue
+
+                # If we found exactly 2 values, those are likely min and max
+                if len(float_values) >= 2:
+                    min_val = min(float_values)
+                    max_val = max(float_values)
+                    logger.debug(
+                        f"   📊 Found total wear range from visual: {min_val} - {max_val}")
+                    return (min_val, max_val)
+
+            except NoSuchElementException:
+                pass
+
+            logger.debug("   ⚠️ Could not find total wear range")
+            return None
+
+        except Exception as e:
+            logger.debug(f"   ⚠️ Error extracting total wear range: {e}")
+            return None
+
     async def scrape_skin_wear_data(self, weapon: str, skin_name: str) -> Optional[SkinWearData]:
         """Scrape wear range data for a specific skin"""
         from datetime import datetime
@@ -350,10 +425,14 @@ class CSGOSkinsGGScraper:
                 # Return default data with all conditions as achievable
                 wear_ranges = self._generate_default_wear_ranges()
 
+            # Extract total wear range (overall min/max for the skin)
+            total_wear_range = await loop.run_in_executor(None, self._extract_total_wear_range)
+
             skin_wear_data = SkinWearData(
                 skin_name=skin_name,
                 weapon=weapon,
                 wear_ranges=wear_ranges,
+                total_wear_range=total_wear_range,
                 scraped_at=datetime.now().isoformat()
             )
 

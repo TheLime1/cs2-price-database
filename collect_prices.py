@@ -217,6 +217,8 @@ class V3PriceCollector:
                     skin_name=skin_data['skin_name'],
                     full_name=skin_data['full_name'],
                     detail_url=skin_data['detail_url'],
+                    csgoskins_url=skin_data.get(
+                        'csgoskins_url'),  # Add csgoskins URL
                     variants=missing_variants  # Only include variants that need updates
                 )
                 missing_items.append(item)
@@ -386,60 +388,74 @@ class V3PriceCollector:
                     "No missing prices found - database is up to date!")
                 return
 
-            # Load missing items into the scraper
-            for item in missing_items:
-                self.scraper.main_queue.put(item)
+            # Process missing items only
+            items_to_process = missing_items
+            logger.info(
+                f"🎯 Processing {len(items_to_process)} skins with missing prices")
 
         else:
             # Load all items from database for full processing
-            await self.scraper.load_items_from_database(self.database_path)
+            logger.info(
+                "📦 Loading all skins from database for full processing")
 
+            skins_list = data.get('skins', [])
+
+            # Apply limit if specified
             if limit:
-                # If limit is specified, we need to adjust the queue
-                logger.info(f"Limiting processing to {limit} skins")
+                skins_list = skins_list[:limit]
+                logger.info(f"🔢 Limited to first {limit} skins")
 
-                # Drain the queue and keep only the first 'limit' items
-                limited_items = []
-                for _ in range(min(limit, self.scraper.main_queue.qsize())):
-                    if not self.scraper.main_queue.empty():
-                        limited_items.append(self.scraper.main_queue.get())
+            # Convert to SkinItem objects
+            items_to_process = []
+            for skin_data in skins_list:
+                # Generate full_name if it doesn't exist
+                full_name = skin_data.get('full_name')
+                if not full_name:
+                    full_name = f"{skin_data['weapon']} | {skin_data['skin_name']}"
 
-                # Clear the queue and re-add limited items
-                while not self.scraper.main_queue.empty():
-                    self.scraper.main_queue.get()
+                # Generate detail_url if it doesn't exist
+                detail_url = skin_data.get(
+                    'detail_url') or skin_data.get('cs2database_link', '')
 
-                for item in limited_items:
-                    self.scraper.main_queue.put(item)
+                logger.debug(
+                    f"🔍 Creating item for {skin_data['id']}: detail_url={detail_url}")
 
-                # Update the total_items count to reflect the actual limit
-                self.scraper.stats['total_items'] = len(limited_items)
-                logger.info(
-                    f"Queue adjusted to {len(limited_items)} items due to --limit {limit}")
+                item = SkinItem(
+                    id=skin_data['id'],
+                    weapon=skin_data['weapon'],
+                    skin_name=skin_data['skin_name'],
+                    full_name=full_name,
+                    detail_url=detail_url,
+                    csgoskins_url=skin_data.get(
+                        'csgoskins_url'),  # Add csgoskins URL
+                    variants=skin_data.get('variants', [])
+                )
+                items_to_process.append(item)
+
+            logger.info(
+                f"📦 Loaded {len(items_to_process)} skins for processing")
 
         # Set the total items count for completion tracking
-        if missing_only:
-            self.scraper.stats['total_items'] = len(missing_items)
-        elif not hasattr(self.scraper.stats, 'total_items') or not self.scraper.stats.get('total_items'):
-            self.scraper.stats['total_items'] = self.scraper.main_queue.qsize()
-
-        logger.info(
-            f"Total items to process: {self.scraper.stats['total_items']}")
+        self.scraper.stats['total_items'] = len(items_to_process)
+        logger.info(f"🎯 Total items to process: {len(items_to_process)}")
 
         # Start the V3.0 high-speed scraping
-        logger.info("Starting CS2 Price Collection System V3.0")
+        logger.info("🚀 Starting CS2 Price Collection System V3.0")
 
         # Convert SkinItem objects to dictionary format for the scraper
         items_data = []
-        for item in missing_items:
+        for item in items_to_process:
             items_data.append({
                 'id': item.id,
                 'weapon': item.weapon,
                 'skin_name': item.skin_name,
                 'full_name': item.full_name,
                 'detail_url': item.detail_url,
+                'csgoskins_url': item.csgoskins_url,  # Include csgoskins URL
                 'variants': item.variants
             })
 
+        # Process all items
         await self.scraper.process_items(items_data)
 
         # Wait for completion (the scraper handles its own completion logic)

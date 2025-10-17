@@ -26,14 +26,15 @@
           },
           "prices": {
             "normal": {
-              "usd": 824.14,
-              "last_updated": "2025-10-04T14:09:04.547652"
+              "usd": 925.0,
+              "last_updated": "2025-10-17T21:10:24.972229"
             },
             "stattrak": {
               "usd": 1515.59,
               "last_updated": "2025-10-04T14:09:05.275373"
             }
-          }
+          },
+          "has_normal_listings": true
         },
         {
           "wear": "Minimal Wear",
@@ -54,7 +55,11 @@
             }
           }
         }
-      ]
+      ],
+      "total_wear_range": {
+        "min": 0.0,
+        "max": 0.08
+      }
     },
     {
       "id": "ak-47-case-hardened",

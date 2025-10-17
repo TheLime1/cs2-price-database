@@ -57,6 +57,8 @@ class SkinItem:
     skin_name: str
     full_name: str
     detail_url: str
+    # URL to csgoskins.gg for wear range validation
+    csgoskins_url: Optional[str]
     variants: List[Dict[str, Any]]
     priority: int = 0
     attempts: int = 0
@@ -175,9 +177,11 @@ class HighSpeedScraper:
         cpu_cores = psutil.cpu_count(logical=True) or 1
         available_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
 
+        # Use full potential - 2x CPU cores and RAM-based calculation
         cpu_based = 2 * cpu_cores
-        ram_based = math.floor(available_ram_mb / 600)
+        ram_based = math.floor(available_ram_mb / 600)  # 600MB per driver
 
+        # Use the full calculated potential (no artificial caps)
         optimal_count = min(cpu_based, ram_based)
         optimal_count = max(1, optimal_count)
 
@@ -231,10 +235,8 @@ class HighSpeedScraper:
             headless=True
         )
 
-        # Initialize the pool
-        await asyncio.get_event_loop().run_in_executor(
-            None, self.webdriver_pool.initialize
-        )
+        # Initialize the pool (it's an async method)
+        await self.webdriver_pool.initialize()
 
         # Create WebDriver workers
         for i in range(self.webdriver_count):
@@ -407,7 +409,7 @@ class HighSpeedScraper:
             return False
 
     async def _scrape_all_variants_with_webdriver(self, worker: Worker, item: SkinItem) -> bool:
-        """Scrape all variants using WebDriver from csgodatabase.com"""
+        """Scrape all variants using WebDriver from csgodatabase.com and csgoskins.gg"""
         try:
             if worker.rate_limiter:
                 await worker.rate_limiter.wait_for_next_request()
@@ -418,11 +420,13 @@ class HighSpeedScraper:
                 return False
 
             try:
-                # Navigate to detail page
+                # STEP 1: Navigate to csgodatabase.com to get prices
+                logger.debug(
+                    f"🌐 [1/2] Navigating to csgodatabase: {item.detail_url}")
                 driver.get(item.detail_url)
                 await asyncio.sleep(2)
 
-                # Scrape page data
+                # Scrape price data
                 loop = asyncio.get_event_loop()
                 scraped_data = await loop.run_in_executor(
                     None,
@@ -434,7 +438,7 @@ class HighSpeedScraper:
 
                 if not scraped_data or not scraped_data.get('prices'):
                     logger.warning(
-                        f"⚠️ No data scraped from {item.detail_url}")
+                        f"⚠️ No price data scraped from {item.detail_url}")
                     return False
 
                 # Update database with scraped prices
@@ -447,7 +451,43 @@ class HighSpeedScraper:
                         )
 
                 logger.info(
-                    f"✅ Scraped {len(scraped_data['prices'])} prices for {item.id}")
+                    f"✅ [1/2] Scraped {len(scraped_data['prices'])} prices for {item.id}")
+
+                # STEP 2: Navigate to csgoskins.gg to get wear range confirmation
+                # Build csgoskins URL from item
+                csgoskins_url = getattr(item, 'csgoskins_url', None)
+                if csgoskins_url:
+                    logger.debug(
+                        f"🌐 [2/2] Navigating to csgoskins: {csgoskins_url}")
+
+                    # Rate limit between requests
+                    if worker.rate_limiter:
+                        await worker.rate_limiter.wait_for_next_request()
+
+                    driver.get(csgoskins_url)
+                    await asyncio.sleep(2)
+
+                    # Extract wear range data
+                    wear_range_data = await loop.run_in_executor(
+                        None,
+                        self._extract_total_wear_range_from_csgoskins,
+                        driver,
+                        item.id
+                    )
+
+                    if wear_range_data:
+                        await self._update_total_wear_range_from_scrape(item, wear_range_data)
+                        logger.info(
+                            f"✅ [2/2] Updated wear range for {item.id}: {wear_range_data['min']} - {wear_range_data['max']}")
+                    else:
+                        logger.warning(
+                            f"⚠️ Could not extract wear range from csgoskins.gg, calculating from variants")
+                        await self._update_total_wear_range(item)
+                else:
+                    logger.warning(
+                        f"⚠️ No csgoskins URL for {item.id}, calculating wear range from variants")
+                    await self._update_total_wear_range(item)
+
                 return True
 
             finally:
@@ -466,38 +506,188 @@ class HighSpeedScraper:
 
             # Wait for price table
             WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "price-cell"))
+                EC.presence_of_element_located((By.TAG_NAME, "table"))
             )
 
-            # Extract prices from the page
-            prices = {}
-            price_rows = driver.find_elements(By.CSS_SELECTOR, "tr.price-row")
+            # Extract header row to map columns to wear types
+            table = driver.find_element(By.TAG_NAME, "table")
+            rows = table.find_elements(By.TAG_NAME, "tr")
 
-            for row in price_rows:
-                try:
-                    wear_element = row.find_element(
-                        By.CSS_SELECTOR, ".wear-name")
-                    price_element = row.find_element(
-                        By.CSS_SELECTOR, ".price-value")
+            if len(rows) < 2:
+                logger.warning(f"⚠️ Table has less than 2 rows")
+                return {'prices': {}, 'success': False}
 
-                    wear = wear_element.text.strip()
-                    price_text = price_element.text.strip()
+            # Parse header row (row 0) to map columns
+            header_row = rows[0]
+            header_cells = header_row.find_elements(By.TAG_NAME, "th")
 
-                    if price_text and "$" in price_text:
-                        price = float(price_text.replace(
-                            "$", "").replace(",", ""))
-                        prices[wear] = {
-                            'usd': price,
-                            'has_listing': True
-                        }
-                except Exception:
+            # Build column map: {column_index: (wear, is_stattrak)}
+            column_map = {}
+            for idx, cell in enumerate(header_cells):
+                if idx == 0:  # Skip "Marketplace" column
                     continue
+
+                text = cell.text.strip()
+                is_stattrak = "StatTrak" in text or "StatTrak™" in text
+
+                # Extract wear from header text
+                wear = text.replace("StatTrak™", "").replace(
+                    "StatTrak", "").strip()
+                if not wear:
+                    continue
+
+                column_map[idx] = (wear, is_stattrak)
+
+            logger.debug(f"📋 Column map: {column_map}")
+
+            # Extract prices from Steam row (row 1, first data row)
+            prices = {}
+            steam_row = rows[1]
+            price_cells = steam_row.find_elements(By.TAG_NAME, "td")
+
+            for idx, cell in enumerate(price_cells):
+                if idx == 0:  # Skip marketplace name column
+                    continue
+
+                if idx not in column_map:
+                    continue
+
+                wear, is_stattrak = column_map[idx]
+                price_text = cell.text.strip()
+
+                # Check if listing exists
+                if "No Listings" in price_text or not price_text:
+                    continue
+
+                # Extract price value
+                if "$" in price_text:
+                    try:
+                        price_value = float(price_text.replace(
+                            "$", "").replace(",", "").strip())
+
+                        # Store price with wear and stattrak info
+                        key = f"{wear}{'_stattrak' if is_stattrak else ''}"
+                        prices[key] = {
+                            'wear': wear,
+                            'usd': price_value,
+                            'has_listing': True,
+                            'is_stattrak': is_stattrak
+                        }
+                        logger.debug(f"💰 Extracted: {key} = ${price_value}")
+                    except ValueError as e:
+                        logger.warning(
+                            f"⚠️ Failed to parse price '{price_text}': {e}")
+                        continue
 
             return {'prices': prices, 'success': len(prices) > 0}
 
         except Exception as e:
-            logger.error(f"❌ Error extracting prices: {e}")
+            logger.error(f"❌ Error extracting prices for {skin_name}: {e}")
             return {'prices': {}, 'success': False}
+
+    def _extract_total_wear_range_from_csgoskins(self, driver, skin_id: str) -> Optional[Dict]:
+        """Extract the overall wear range from csgoskins.gg page"""
+        try:
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.support.wait import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            import re
+
+            # Wait for page to load
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//h2[contains(text(), 'Wear Range')]"))
+            )
+
+            # Method 1: Try to find the description text with "ranges from X to Y"
+            try:
+                description_elements = driver.find_elements(
+                    By.XPATH,
+                    "//*[contains(text(), 'float value') and contains(text(), 'ranges from')]"
+                )
+                for elem in description_elements:
+                    text = elem.text.strip()
+                    match = re.search(
+                        r'ranges from ([\d.]+) to ([\d.]+)', text)
+                    if match:
+                        min_val = float(match.group(1))
+                        max_val = float(match.group(2))
+                        logger.debug(
+                            f"   📊 Found total wear range (method 1): {min_val} - {max_val}")
+                        return {'min': min_val, 'max': max_val}
+            except Exception as e:
+                logger.debug(f"   ⚠️ Method 1 failed: {e}")
+
+            # Method 2: Look for the visual wear range indicator
+            try:
+                wear_heading = driver.find_element(
+                    By.XPATH, "//h2[contains(text(), 'Wear Range')]"
+                )
+                parent = wear_heading.find_element(By.XPATH, "./..")
+
+                # Find all elements with float values
+                float_elements = parent.find_elements(
+                    By.XPATH, ".//*[contains(text(), '0.')]")
+
+                float_values = []
+                for elem in float_elements:
+                    text = elem.text.strip()
+                    matches = re.findall(r'\b0\.\d+\b', text)
+                    for match in matches:
+                        try:
+                            float_values.append(float(match))
+                        except ValueError:
+                            continue
+
+                # Get min and max from the found values
+                if len(float_values) >= 2:
+                    # Usually the first two values are min and max
+                    min_val = min(float_values[:2])
+                    max_val = max(float_values[:2])
+                    logger.debug(
+                        f"   📊 Found total wear range (method 2): {min_val} - {max_val}")
+                    return {'min': min_val, 'max': max_val}
+
+            except Exception as e:
+                logger.debug(f"   ⚠️ Method 2 failed: {e}")
+
+            logger.warning(
+                f"⚠️ Could not extract wear range from csgoskins.gg for {skin_id}")
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Error extracting wear range from csgoskins: {e}")
+            return None
+
+    async def _update_total_wear_range_from_scrape(self, item: SkinItem, wear_range_data: Dict):
+        """Update total wear range in database from scraped csgoskins.gg data"""
+        try:
+            database_path = "data/skins_database.json"
+
+            with open(database_path, 'r', encoding='utf-8') as f:
+                database = json.load(f)
+
+            # Find the skin
+            skin = next(
+                (s for s in database['skins'] if s['id'] == item.id), None)
+            if not skin:
+                return
+
+            # Update with scraped data
+            skin['total_wear_range'] = {
+                'min': wear_range_data['min'],
+                'max': wear_range_data['max']
+            }
+
+            # Save database
+            with open(database_path, 'w', encoding='utf-8') as f:
+                json.dump(database, f, indent=2, ensure_ascii=False)
+
+            logger.debug(
+                f"✅ Updated total wear range from csgoskins for {item.id}")
+
+        except Exception as e:
+            logger.error(f"❌ Error updating total wear range from scrape: {e}")
 
     async def _update_variant_from_scraped_data(self, item: SkinItem, variant: Dict, price_info: Dict):
         """Update variant with scraped price data"""
@@ -538,6 +728,57 @@ class HighSpeedScraper:
 
         except Exception as e:
             logger.error(f"❌ Error updating variant: {e}")
+
+    async def _update_total_wear_range(self, item: SkinItem):
+        """Calculate and update total wear range for a skin based on ACHIEVABLE variants only"""
+        try:
+            database_path = "data/skins_database.json"
+
+            with open(database_path, 'r', encoding='utf-8') as f:
+                database = json.load(f)
+
+            # Find the skin
+            skin = next(
+                (s for s in database['skins'] if s['id'] == item.id), None)
+            if not skin:
+                return
+
+            # Calculate total wear range from ACHIEVABLE variants only
+            min_wear = float('inf')
+            max_wear = float('-inf')
+
+            for variant in skin.get('variants', []):
+                # Only consider achievable variants
+                if not variant.get('achievable', True):
+                    continue
+
+                wear_range = variant.get('wear_range', {})
+                if 'min' in wear_range and 'max' in wear_range:
+                    min_wear = min(min_wear, wear_range['min'])
+                    max_wear = max(max_wear, wear_range['max'])
+
+            # Only update if we found valid wear ranges
+            if min_wear != float('inf') and max_wear != float('-inf'):
+                skin['total_wear_range'] = {
+                    'min': min_wear,
+                    'max': max_wear
+                }
+
+                # Save database
+                with open(database_path, 'w', encoding='utf-8') as f:
+                    json.dump(database, f, indent=2, ensure_ascii=False)
+
+                logger.debug(
+                    f"✅ Updated total wear range for {item.id}: {min_wear} - {max_wear}")
+            else:
+                logger.warning(
+                    f"⚠️ No valid achievable wear ranges found for {item.id}")
+
+        except Exception as e:
+            logger.error(f"❌ Error updating total wear range: {e}")
+
+        except Exception as e:
+            logger.error(f"❌ Error updating total wear range: {e}")
 
     def _mark_item_completed(self, item: SkinItem):
         """Mark item as completed"""
@@ -666,14 +907,19 @@ class HighSpeedScraper:
         logger.info(f"📦 Processing {len(items)} items")
 
         for item_data in items:
+            logger.debug(f"📋 Item detail_url: {item_data.get('detail_url')}")
             skin_item = SkinItem(
                 id=item_data['id'],
                 weapon=item_data['weapon'],
                 skin_name=item_data['skin_name'],
                 full_name=item_data['full_name'],
                 detail_url=item_data['detail_url'],
+                csgoskins_url=item_data.get(
+                    'csgoskins_url'),  # Add csgoskins URL
                 variants=item_data['variants']
             )
+            logger.debug(
+                f"📋 SkinItem created with URL: {skin_item.detail_url}")
             self.main_queue.put(skin_item)
 
         logger.info(f"✅ Queued {len(items)} items")
