@@ -130,7 +130,8 @@ class WebDriverPool:
                 if driver:
                     self.drivers.append(driver)
                     self.driver_queue.put(driver)
-                    logger.info(f"✅ Driver {i+1} initialized (direct connection)")
+                    logger.info(
+                        f"✅ Driver {i+1} initialized (direct connection)")
 
         self.is_initialized = True
         logger.info(

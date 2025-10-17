@@ -72,7 +72,8 @@ class DatabaseMigrationV3:
         backup_dir = Path("backups")
         backup_dir.mkdir(exist_ok=True)
 
-        self.backup_path = backup_dir / f"skins_database_v2_backup_{timestamp}.json"
+        self.backup_path = backup_dir / \
+            f"skins_database_v2_backup_{timestamp}.json"
 
         logger.info(f"📦 Creating backup: {self.backup_path}")
         shutil.copy2(self.database_path, self.backup_path)
@@ -126,7 +127,8 @@ class DatabaseMigrationV3:
 
         # 4. Add achievable field (default to True if no data)
         if wear_range_data and wear_condition in wear_range_data:
-            migrated['achievable'] = wear_range_data[wear_condition].get('achievable', True)
+            migrated['achievable'] = wear_range_data[wear_condition].get(
+                'achievable', True)
         else:
             migrated['achievable'] = True  # Assume achievable by default
 
@@ -134,13 +136,14 @@ class DatabaseMigrationV3:
         # Old: "available": true/false (just normal variant)
         # New: "listing": {"normal": true/false, "stattrak": true/false}
         old_available = variant.get('available', False)
-        
+
         # Check if StatTrak price exists to determine StatTrak listing
         has_stattrak = 'stattrak' in variant.get('prices', {})
-        
+
         if wear_range_data and wear_condition in wear_range_data:
             # Use scraped data for StatTrak availability
-            has_stattrak = wear_range_data[wear_condition].get('has_stattrak', has_stattrak)
+            has_stattrak = wear_range_data[wear_condition].get(
+                'has_stattrak', has_stattrak)
 
         migrated['listing'] = {
             'normal': old_available,
@@ -212,7 +215,8 @@ class DatabaseMigrationV3:
                 migrated_skin = self.migrate_skin(skin, wear_range_map)
                 migrated['skins'].append(migrated_skin)
             except Exception as e:
-                logger.error(f"❌ Error migrating skin {skin.get('id', 'unknown')}: {e}")
+                logger.error(
+                    f"❌ Error migrating skin {skin.get('id', 'unknown')}: {e}")
                 self.stats['errors'] += 1
 
         logger.info("✅ Database migration complete!")
@@ -229,7 +233,8 @@ class DatabaseMigrationV3:
         migrated_count = len(migrated.get('skins', []))
 
         if original_count != migrated_count:
-            errors.append(f"Skin count mismatch: {original_count} → {migrated_count}")
+            errors.append(
+                f"Skin count mismatch: {original_count} → {migrated_count}")
 
         # Check required fields
         for skin in migrated.get('skins', []):
@@ -239,27 +244,33 @@ class DatabaseMigrationV3:
             if 'availability' in skin:
                 errors.append(f"Skin {skin_id} still has 'availability' field")
             if 'stattrak_availability' in skin:
-                errors.append(f"Skin {skin_id} still has 'stattrak_availability' field")
+                errors.append(
+                    f"Skin {skin_id} still has 'stattrak_availability' field")
 
             # Check variants have new fields
             for variant in skin.get('variants', []):
                 wear = variant.get('wear', 'unknown')
 
                 if 'wear_range' not in variant:
-                    errors.append(f"Variant {skin_id}/{wear} missing 'wear_range'")
+                    errors.append(
+                        f"Variant {skin_id}/{wear} missing 'wear_range'")
 
                 if 'achievable' not in variant:
-                    errors.append(f"Variant {skin_id}/{wear} missing 'achievable'")
+                    errors.append(
+                        f"Variant {skin_id}/{wear} missing 'achievable'")
 
                 if 'listing' not in variant:
-                    errors.append(f"Variant {skin_id}/{wear} missing 'listing'")
+                    errors.append(
+                        f"Variant {skin_id}/{wear} missing 'listing'")
                 else:
                     listing = variant['listing']
                     if 'normal' not in listing or 'stattrak' not in listing:
-                        errors.append(f"Variant {skin_id}/{wear} has invalid 'listing' structure")
+                        errors.append(
+                            f"Variant {skin_id}/{wear} has invalid 'listing' structure")
 
                 if 'available' in variant:
-                    errors.append(f"Variant {skin_id}/{wear} still has old 'available' field")
+                    errors.append(
+                        f"Variant {skin_id}/{wear} still has old 'available' field")
 
         if errors:
             logger.error(f"❌ Validation failed with {len(errors)} errors:")
@@ -330,9 +341,11 @@ class DatabaseMigrationV3:
                         wear_range_map[skin_id] = wear_map
 
                 except Exception as e:
-                    logger.warning(f"⚠️ Error scraping {weapon} | {skin_name}: {e}")
+                    logger.warning(
+                        f"⚠️ Error scraping {weapon} | {skin_name}: {e}")
 
-            logger.info(f"✅ Scraped wear ranges for {len(wear_range_map)}/{total} skins")
+            logger.info(
+                f"✅ Scraped wear ranges for {len(wear_range_map)}/{total} skins")
 
         finally:
             await scraper.cleanup()
@@ -367,7 +380,8 @@ async def main():
     print("CS2 PRICE DATABASE V3.0 MIGRATION")
     print("="*80)
     print(f"Database: {args.database}")
-    print(f"Scrape wear ranges: {'Yes' if args.scrape_wear_ranges else 'No (using defaults)'}")
+    print(
+        f"Scrape wear ranges: {'Yes' if args.scrape_wear_ranges else 'No (using defaults)'}")
     print(f"Dry run: {'Yes' if args.dry_run else 'No'}")
     print("="*80 + "\n")
 
@@ -383,7 +397,8 @@ async def main():
     if args.scrape_wear_ranges:
         wear_range_map = await migrator.scrape_wear_ranges(data)
     else:
-        logger.info("ℹ️ Using default wear ranges (use --scrape-wear-ranges for actual data)")
+        logger.info(
+            "ℹ️ Using default wear ranges (use --scrape-wear-ranges for actual data)")
 
     # Perform migration
     migrated_data = migrator.migrate_database(data, wear_range_map)
@@ -398,7 +413,7 @@ async def main():
     # Save migrated database (unless dry run)
     if args.dry_run:
         logger.info("🔍 DRY RUN - Changes not saved")
-        
+
         # Show sample of migrated data
         if migrated_data['skins']:
             sample_skin = migrated_data['skins'][0]

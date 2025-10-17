@@ -430,7 +430,7 @@ class V3PriceCollector:
 
         # Start the V3.0 high-speed scraping
         logger.info("Starting CS2 Price Collection System V3.0")
-        
+
         # Convert SkinItem objects to dictionary format for the scraper
         items_data = []
         for item in missing_items:
@@ -442,7 +442,7 @@ class V3PriceCollector:
                 'detail_url': item.detail_url,
                 'variants': item.variants
             })
-        
+
         await self.scraper.process_items(items_data)
 
         # Wait for completion (the scraper handles its own completion logic)

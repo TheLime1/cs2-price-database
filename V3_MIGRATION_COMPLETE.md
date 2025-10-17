@@ -78,33 +78,33 @@
 ## 📊 Migration Statistics
 
 ### Code Changes
-| Metric | Before (V2.0) | After (V3.0) | Change |
-|--------|---------------|--------------|--------|
-| **Total Lines** | ~15,000 | ~12,000 | -3,000 (20% reduction) |
-| **Files Deleted** | 0 | 2 | proxy_manager.py, steam_api.py |
-| **Files Created** | 0 | 2 | csgoskins_scraper.py, migrate_database_v3.py |
-| **Files Cleaned** | 0 | 5 | summary_logger, optimized_fallback, high_speed, collect_prices, .env.example |
-| **Docs Updated** | 0 | 3 | README, command_line_flags, database_structure |
+| Metric            | Before (V2.0) | After (V3.0) | Change                                                                       |
+| ----------------- | ------------- | ------------ | ---------------------------------------------------------------------------- |
+| **Total Lines**   | ~15,000       | ~12,000      | -3,000 (20% reduction)                                                       |
+| **Files Deleted** | 0             | 2            | proxy_manager.py, steam_api.py                                               |
+| **Files Created** | 0             | 2            | csgoskins_scraper.py, migrate_database_v3.py                                 |
+| **Files Cleaned** | 0             | 5            | summary_logger, optimized_fallback, high_speed, collect_prices, .env.example |
+| **Docs Updated**  | 0             | 3            | README, command_line_flags, database_structure                               |
 
 ### Architecture Changes
-| Component | V2.0 | V3.0 |
-|-----------|------|------|
-| **Proxy Support** | ✅ Full proxy rotation | ❌ Removed |
-| **Steam API** | ✅ Primary method | ❌ Removed |
-| **WebDriver** | Fallback only | ✅ Primary (only) method |
-| **Data Sources** | Steam API | csgodatabase.com + csgoskins.gg |
-| **Rate Limiting** | API-based (19/min) | WebDriver-based (1-3 RPS) |
-| **Worker Types** | Proxy + WebDriver | WebDriver only |
+| Component         | V2.0                  | V3.0                            |
+| ----------------- | --------------------- | ------------------------------- |
+| **Proxy Support** | ✅ Full proxy rotation | ❌ Removed                       |
+| **Steam API**     | ✅ Primary method      | ❌ Removed                       |
+| **WebDriver**     | Fallback only         | ✅ Primary (only) method         |
+| **Data Sources**  | Steam API             | csgodatabase.com + csgoskins.gg |
+| **Rate Limiting** | API-based (19/min)    | WebDriver-based (1-3 RPS)       |
+| **Worker Types**  | Proxy + WebDriver     | WebDriver only                  |
 
 ### Database Schema Changes
-| Field | V2.0 | V3.0 |
-|-------|------|------|
-| **wear_range** | ❌ | ✅ {min, max} |
-| **achievable** | ❌ | ✅ boolean |
-| **listing** | ❌ | ✅ {normal, stattrak} |
-| **available** | ✅ | ❌ (replaced by listing.normal) |
-| **availability** | ✅ | ❌ (removed) |
-| **stattrak_availability** | ✅ | ❌ (removed) |
+| Field                     | V2.0 | V3.0                           |
+| ------------------------- | ---- | ------------------------------ |
+| **wear_range**            | ❌    | ✅ {min, max}                   |
+| **achievable**            | ❌    | ✅ boolean                      |
+| **listing**               | ❌    | ✅ {normal, stattrak}           |
+| **available**             | ✅    | ❌ (replaced by listing.normal) |
+| **availability**          | ✅    | ❌ (removed)                    |
+| **stattrak_availability** | ✅    | ❌ (removed)                    |
 
 ---
 

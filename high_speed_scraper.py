@@ -167,7 +167,8 @@ class HighSpeedScraper:
             'last_activity': None
         }
 
-        logger.info(f"🚀 V3.0 High-speed scraper initialized with {self.webdriver_count} WebDrivers")
+        logger.info(
+            f"🚀 V3.0 High-speed scraper initialized with {self.webdriver_count} WebDrivers")
         logger.info(f"💾 Checkpoint path: {self.checkpoint_path}")
 
     def _calculate_webdriver_count(self) -> int:
@@ -181,8 +182,10 @@ class HighSpeedScraper:
         optimal_count = min(cpu_based, ram_based)
         optimal_count = max(1, optimal_count)
 
-        logger.info(f"💻 System resources: {cpu_cores} CPU cores, {available_ram_mb:.0f}MB RAM")
-        logger.info(f"🧮 WebDriver calculation: min({cpu_based}, {ram_based}) = {optimal_count}")
+        logger.info(
+            f"💻 System resources: {cpu_cores} CPU cores, {available_ram_mb:.0f}MB RAM")
+        logger.info(
+            f"🧮 WebDriver calculation: min({cpu_based}, {ram_based}) = {optimal_count}")
 
         return optimal_count
 
@@ -220,7 +223,8 @@ class HighSpeedScraper:
 
     async def _initialize_webdrivers(self):
         """Initialize WebDriver pool and start workers"""
-        logger.info(f"🌐 Initializing {self.webdriver_count} WebDriver workers...")
+        logger.info(
+            f"🌐 Initializing {self.webdriver_count} WebDriver workers...")
 
         # Create WebDriver pool
         self.webdriver_pool = WebDriverPool(
@@ -304,7 +308,8 @@ class HighSpeedScraper:
                     elif worker.status == WorkerStatus.RATE_LIMITED:
                         if worker.rate_limit_until and current_time > worker.rate_limit_until:
                             worker.status = WorkerStatus.IDLE
-                            logger.info(f"⏰ Worker {worker_id} rate limit expired")
+                            logger.info(
+                                f"⏰ Worker {worker_id} rate limit expired")
 
                 # Remove failed workers
                 for worker_id in failed_workers:
@@ -327,7 +332,8 @@ class HighSpeedScraper:
         worker = self.workers[worker_id]
 
         if worker.worker_type == WorkerType.WEBDRIVER:
-            self.webdriver_workers = [w for w in self.webdriver_workers if w.id != worker_id]
+            self.webdriver_workers = [
+                w for w in self.webdriver_workers if w.id != worker_id]
 
         if worker.current_item:
             worker.current_item.assigned_to = None
@@ -374,7 +380,8 @@ class HighSpeedScraper:
                 'attempts': item.attempts
             }
 
-            logger.debug(f"🔄 Worker {worker.id} stole fallback item: {item.id}")
+            logger.debug(
+                f"🔄 Worker {worker.id} stole fallback item: {item.id}")
             return item
 
         except Empty:
@@ -427,18 +434,21 @@ class HighSpeedScraper:
                 )
 
                 if not scraped_data or not scraped_data.get('prices'):
-                    logger.warning(f"⚠️ No data scraped from {item.detail_url}")
+                    logger.warning(
+                        f"⚠️ No data scraped from {item.detail_url}")
                     return False
 
                 # Update database with scraped prices
                 for wear_condition, price_info in scraped_data['prices'].items():
-                    variant = next((v for v in item.variants if v['wear'] == wear_condition), None)
+                    variant = next(
+                        (v for v in item.variants if v['wear'] == wear_condition), None)
                     if variant:
                         await self._update_variant_from_scraped_data(
                             item, variant, price_info
                         )
 
-                logger.info(f"✅ Scraped {len(scraped_data['prices'])} prices for {item.id}")
+                logger.info(
+                    f"✅ Scraped {len(scraped_data['prices'])} prices for {item.id}")
                 return True
 
             finally:
@@ -466,14 +476,17 @@ class HighSpeedScraper:
 
             for row in price_rows:
                 try:
-                    wear_element = row.find_element(By.CSS_SELECTOR, ".wear-name")
-                    price_element = row.find_element(By.CSS_SELECTOR, ".price-value")
+                    wear_element = row.find_element(
+                        By.CSS_SELECTOR, ".wear-name")
+                    price_element = row.find_element(
+                        By.CSS_SELECTOR, ".price-value")
 
                     wear = wear_element.text.strip()
                     price_text = price_element.text.strip()
 
                     if price_text and "$" in price_text:
-                        price = float(price_text.replace("$", "").replace(",", ""))
+                        price = float(price_text.replace(
+                            "$", "").replace(",", ""))
                         prices[wear] = {
                             'usd': price,
                             'has_listing': True
@@ -496,12 +509,14 @@ class HighSpeedScraper:
                 database = json.load(f)
 
             # Find the skin
-            skin = next((s for s in database['skins'] if s['id'] == item.id), None)
+            skin = next(
+                (s for s in database['skins'] if s['id'] == item.id), None)
             if not skin:
                 return
 
             # Find variant
-            var = next((v for v in skin['variants'] if v['wear'] == variant['wear']), None)
+            var = next((v for v in skin['variants']
+                       if v['wear'] == variant['wear']), None)
             if not var:
                 return
 
@@ -549,7 +564,8 @@ class HighSpeedScraper:
         )
 
         self.fallback_queue.put(priority_item)
-        logger.warning(f"🔄 Delegated {item.id} to fallback (priority: {effective_priority})")
+        logger.warning(
+            f"🔄 Delegated {item.id} to fallback (priority: {effective_priority})")
 
     async def _return_item_to_queue(self, item: SkinItem):
         """Return item to appropriate queue"""
@@ -568,10 +584,13 @@ class HighSpeedScraper:
     def _log_worker_status(self):
         """Log current worker status"""
         total = len(self.workers)
-        idle = sum(1 for w in self.workers.values() if w.status == WorkerStatus.IDLE)
-        working = sum(1 for w in self.workers.values() if w.status == WorkerStatus.WORKING)
+        idle = sum(1 for w in self.workers.values()
+                   if w.status == WorkerStatus.IDLE)
+        working = sum(1 for w in self.workers.values()
+                      if w.status == WorkerStatus.WORKING)
 
-        logger.debug(f"👷 Workers: {total} total, {idle} idle, {working} working")
+        logger.debug(
+            f"👷 Workers: {total} total, {idle} idle, {working} working")
 
     async def _statistics_loop(self):
         """Log statistics periodically"""
@@ -583,19 +602,20 @@ class HighSpeedScraper:
     def _log_statistics(self):
         """Log current statistics"""
         logger.info(f"📊 Stats: {self.stats['webdriver_successes']} successes, "
-                   f"{self.stats['webdriver_failures']} failures, "
-                   f"{self.stats['items_processed']} completed")
+                    f"{self.stats['webdriver_failures']} failures, "
+                    f"{self.stats['items_processed']} completed")
 
     async def _completion_monitor_loop(self):
         """Monitor for completion"""
         while not self.shutdown_event.is_set():
             await asyncio.sleep(5)
 
-            if (self.main_queue.empty() and 
+            if (self.main_queue.empty() and
                 self.fallback_queue.empty() and
-                all(w.status == WorkerStatus.IDLE for w in self.workers.values())):
-                
-                logger.info("🎉 All queues empty and workers idle - collection complete!")
+                    all(w.status == WorkerStatus.IDLE for w in self.workers.values())):
+
+                logger.info(
+                    "🎉 All queues empty and workers idle - collection complete!")
                 self.shutdown_event.set()
 
     def _register_shutdown_handler(self):
@@ -620,7 +640,8 @@ class HighSpeedScraper:
             with open(self.checkpoint_path, 'r', encoding='utf-8') as f:
                 checkpoint = json.load(f)
 
-            logger.info(f"📂 Loaded checkpoint with {len(checkpoint.get('items', []))} items")
+            logger.info(
+                f"📂 Loaded checkpoint with {len(checkpoint.get('items', []))} items")
 
         except Exception as e:
             logger.error(f"❌ Error loading checkpoint: {e}")

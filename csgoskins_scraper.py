@@ -77,8 +77,10 @@ class CSGOSkinsGGScraper:
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument('--window-size=1920,1080')
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
+        chrome_options.add_argument(
+            '--disable-blink-features=AutomationControlled')
+        chrome_options.add_experimental_option(
+            'excludeSwitches', ['enable-automation'])
         chrome_options.add_experimental_option('useAutomationExtension', False)
 
         # Random user agent
@@ -112,11 +114,12 @@ class CSGOSkinsGGScraper:
     def _build_search_url(self, weapon: str, skin_name: str) -> str:
         """Build search URL for csgoskins.gg"""
         # Remove common prefixes
-        weapon_clean = weapon.replace('StatTrak™ ', '').replace('Souvenir ', '')
-        
+        weapon_clean = weapon.replace(
+            'StatTrak™ ', '').replace('Souvenir ', '')
+
         # Format for URL - csgoskins.gg uses format like: /items/awp-asiimov (all lowercase)
         skin_slug = f"{weapon_clean}-{skin_name}".replace(' ', '-').lower()
-        
+
         return f"{self.base_url}/items/{skin_slug}"
 
     def _extract_wear_ranges(self) -> List[WearRange]:
@@ -127,40 +130,44 @@ class CSGOSkinsGGScraper:
             # Wait for wear range content to load
             # Look for the "Wear Range" heading first
             WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, "//h2[contains(text(), 'Wear Range')]"))
+                EC.presence_of_element_located(
+                    (By.XPATH, "//h2[contains(text(), 'Wear Range')]"))
             )
 
             # Method 1: Extract from wear range text format: "0.15 - 0.38 = Field-Tested (FT)"
-            wear_divs = self.driver.find_elements(By.XPATH, "//div[contains(text(), ' = ') and contains(text(), '0.')]")
-            
+            wear_divs = self.driver.find_elements(
+                By.XPATH, "//div[contains(text(), ' = ') and contains(text(), '0.')]")
+
             wear_data_from_divs = {}
             for div in wear_divs:
                 try:
                     text = div.text.strip()
                     if ' = ' not in text or ' - ' not in text:
                         continue
-                    
+
                     parts = text.split(' = ')
                     if len(parts) != 2:
                         continue
-                    
+
                     range_part = parts[0].strip()  # "0.15 - 0.38"
                     condition_part = parts[1].strip()  # "Field-Tested (FT)"
-                    
+
                     # Extract condition name (remove abbreviation)
                     wear_condition = condition_part.split(' (')[0].strip()
-                    
+
                     # Parse min and max float values
                     range_values = range_part.split(' - ')
                     if len(range_values) != 2:
                         continue
-                    
+
                     min_float = float(range_values[0].strip())
                     max_float = float(range_values[1].strip())
-                    
-                    wear_data_from_divs[wear_condition] = (min_float, max_float)
-                    logger.debug(f"   📏 Found range: {wear_condition} [{min_float} - {max_float}]")
-                    
+
+                    wear_data_from_divs[wear_condition] = (
+                        min_float, max_float)
+                    logger.debug(
+                        f"   📏 Found range: {wear_condition} [{min_float} - {max_float}]")
+
                 except (ValueError, IndexError) as e:
                     logger.debug(f"   ⚠️ Skipping div parse: {e}")
                     continue
@@ -168,69 +175,71 @@ class CSGOSkinsGGScraper:
             # Method 2: Check achievability from price listings
             # Find all wear condition spans (format: "Factory New", "Minimal Wear", etc.)
             # These are in spans with class "whitespace-nowrap"
-            condition_spans = self.driver.find_elements(By.XPATH, 
-                "//span[@class='whitespace-nowrap' and (contains(text(), 'Factory New') or contains(text(), 'Minimal Wear') or contains(text(), 'Field-Tested') or contains(text(), 'Well-Worn') or contains(text(), 'Battle-Scarred'))]")
-            
+            condition_spans = self.driver.find_elements(By.XPATH,
+                                                        "//span[@class='whitespace-nowrap' and (contains(text(), 'Factory New') or contains(text(), 'Minimal Wear') or contains(text(), 'Field-Tested') or contains(text(), 'Well-Worn') or contains(text(), 'Battle-Scarred'))]")
+
             achievable_conditions = {}
             stattrak_conditions = {}
-            
+
             for span in condition_spans:
                 try:
                     condition_text = span.text.strip()
-                    
+
                     # Skip if it contains "StatTrak" - we'll handle those separately
                     if "StatTrak" in condition_text:
                         continue
-                    
+
                     # Normalize condition name
                     wear_condition = condition_text.strip()
-                    
+
                     # Check the grandparent row div for "Not possible"
                     # Structure: grandparent (row) -> parent (grow div) -> span (condition)
                     parent = span.find_element(By.XPATH, "./..")
                     grandparent = parent.find_element(By.XPATH, "./..")
                     grandparent_text = grandparent.text.strip()
-                    
+
                     # If row contains "Not possible", this wear is not achievable
                     is_achievable = "Not possible" not in grandparent_text
-                    
+
                     achievable_conditions[wear_condition] = is_achievable
-                    logger.debug(f"   {'✅' if is_achievable else '❌'} {wear_condition}: {'Achievable' if is_achievable else 'Not possible'}")
-                    
+                    logger.debug(
+                        f"   {'✅' if is_achievable else '❌'} {wear_condition}: {'Achievable' if is_achievable else 'Not possible'}")
+
                 except Exception as e:
                     logger.debug(f"   ⚠️ Error checking achievability: {e}")
                     continue
 
             # Method 3: Check StatTrak availability
-            stattrak_spans = self.driver.find_elements(By.XPATH, 
-                "//span[@class='whitespace-nowrap' and contains(text(), 'StatTrak')]")
-            
+            stattrak_spans = self.driver.find_elements(By.XPATH,
+                                                       "//span[@class='whitespace-nowrap' and contains(text(), 'StatTrak')]")
+
             for span in stattrak_spans:
                 try:
                     condition_text = span.text.strip()
                     # This span only contains "StatTrak", need to find the next sibling for condition
                     # Get parent, then find the next span sibling which has the condition name
                     parent = span.find_element(By.XPATH, "./..")
-                    
+
                     # Try to find the condition span in the same parent
                     try:
-                        condition_span = parent.find_element(By.XPATH, 
-                            ".//span[@class='whitespace-nowrap' and (contains(text(), 'Factory New') or contains(text(), 'Minimal Wear') or contains(text(), 'Field-Tested') or contains(text(), 'Well-Worn') or contains(text(), 'Battle-Scarred'))]")
+                        condition_span = parent.find_element(By.XPATH,
+                                                             ".//span[@class='whitespace-nowrap' and (contains(text(), 'Factory New') or contains(text(), 'Minimal Wear') or contains(text(), 'Field-Tested') or contains(text(), 'Well-Worn') or contains(text(), 'Battle-Scarred'))]")
                         wear_condition = condition_span.text.strip()
                     except:
                         # Fallback: might be in adjacent element
                         continue
-                    
+
                     # Check grandparent row for "Not possible"
                     grandparent = parent.find_element(By.XPATH, "./..")
                     grandparent_text = grandparent.text.strip()
-                    
+
                     # If StatTrak version shows a price (not "Not possible"), StatTrak is available
                     has_stattrak = "Not possible" not in grandparent_text
-                    
+
                     stattrak_conditions[wear_condition] = has_stattrak
-                    logger.debug(f"   {'🌟' if has_stattrak else '⭕'} StatTrak {wear_condition}: {'Available' if has_stattrak else 'Not available'}")
-                    
+                    logger.debug(
+                        f"   {'🌟' if has_stattrak else '⭕'} StatTrak {wear_condition}: {'Available' if has_stattrak else 'Not available'}")
+
                 except Exception as e:
                     logger.debug(f"   ⚠️ Error checking StatTrak: {e}")
                     continue
@@ -243,13 +252,15 @@ class CSGOSkinsGGScraper:
                     min_float, max_float = wear_data_from_divs[condition]
                 else:
                     min_float, max_float = min_val, max_val
-                
+
                 # Check achievability
-                achievable = achievable_conditions.get(condition, True)  # Default to True
-                
+                achievable = achievable_conditions.get(
+                    condition, True)  # Default to True
+
                 # Check StatTrak availability
-                has_stattrak = stattrak_conditions.get(condition, achievable)  # Default to same as achievable
-                
+                has_stattrak = stattrak_conditions.get(
+                    condition, achievable)  # Default to same as achievable
+
                 wear_range = WearRange(
                     wear_condition=condition,
                     min_float=min_float,
@@ -257,10 +268,10 @@ class CSGOSkinsGGScraper:
                     achievable=achievable,
                     has_stattrak=has_stattrak
                 )
-                
+
                 wear_ranges.append(wear_range)
                 logger.debug(f"   ✓ Final: {condition} [{min_float:.4f}-{max_float:.4f}] "
-                           f"achievable={achievable} stattrak={has_stattrak}")
+                             f"achievable={achievable} stattrak={has_stattrak}")
 
         except TimeoutException:
             logger.warning("⏰ Timeout waiting for wear range content")
@@ -277,15 +288,20 @@ class CSGOSkinsGGScraper:
 
         try:
             # Try finding wear info divs or other containers
-            wear_elements = self.driver.find_elements(By.CSS_SELECTOR, "[data-wear-condition]")
+            wear_elements = self.driver.find_elements(
+                By.CSS_SELECTOR, "[data-wear-condition]")
 
             for elem in wear_elements:
                 try:
                     wear_condition = elem.get_attribute('data-wear-condition')
-                    min_float = float(elem.get_attribute('data-min-float') or 0.0)
-                    max_float = float(elem.get_attribute('data-max-float') or 1.0)
-                    achievable = elem.get_attribute('data-achievable') == 'true'
-                    has_stattrak = elem.get_attribute('data-stattrak') == 'true'
+                    min_float = float(elem.get_attribute(
+                        'data-min-float') or 0.0)
+                    max_float = float(elem.get_attribute(
+                        'data-max-float') or 1.0)
+                    achievable = elem.get_attribute(
+                        'data-achievable') == 'true'
+                    has_stattrak = elem.get_attribute(
+                        'data-stattrak') == 'true'
 
                     wear_range = WearRange(
                         wear_condition=wear_condition,
@@ -298,7 +314,8 @@ class CSGOSkinsGGScraper:
                     wear_ranges.append(wear_range)
 
                 except Exception as e:
-                    logger.debug(f"Error parsing alternative wear element: {e}")
+                    logger.debug(
+                        f"Error parsing alternative wear element: {e}")
                     continue
 
         except Exception as e:
@@ -328,7 +345,8 @@ class CSGOSkinsGGScraper:
             wear_ranges = await loop.run_in_executor(None, self._extract_wear_ranges)
 
             if not wear_ranges:
-                logger.warning(f"⚠️ No wear data found for {weapon} | {skin_name}")
+                logger.warning(
+                    f"⚠️ No wear data found for {weapon} | {skin_name}")
                 # Return default data with all conditions as achievable
                 wear_ranges = self._generate_default_wear_ranges()
 
@@ -339,7 +357,8 @@ class CSGOSkinsGGScraper:
                 scraped_at=datetime.now().isoformat()
             )
 
-            logger.info(f"✅ Scraped {len(wear_ranges)} wear ranges for {skin_name}")
+            logger.info(
+                f"✅ Scraped {len(wear_ranges)} wear ranges for {skin_name}")
             return skin_wear_data
 
         except Exception as e:
@@ -349,7 +368,7 @@ class CSGOSkinsGGScraper:
     def _generate_default_wear_ranges(self) -> List[WearRange]:
         """Generate default wear ranges when scraping fails"""
         logger.debug("   📋 Generating default wear ranges (all achievable)")
-        
+
         return [
             WearRange(
                 wear_condition=condition,
@@ -369,7 +388,8 @@ class CSGOSkinsGGScraper:
             weapon = skin.get('weapon', '')
             skin_name = skin.get('skin_name', '')
 
-            logger.info(f"[{i}/{len(skins)}] Processing: {weapon} | {skin_name}")
+            logger.info(
+                f"[{i}/{len(skins)}] Processing: {weapon} | {skin_name}")
 
             wear_data = await self.scrape_skin_wear_data(weapon, skin_name)
 
@@ -379,7 +399,8 @@ class CSGOSkinsGGScraper:
             # Rate limiting - be respectful to csgoskins.gg
             if i < len(skins):
                 delay = random.uniform(3.0, 6.0)
-                logger.debug(f"   ⏳ Waiting {delay:.1f}s before next request...")
+                logger.debug(
+                    f"   ⏳ Waiting {delay:.1f}s before next request...")
                 await asyncio.sleep(delay)
 
         logger.info(f"✅ Completed scraping {len(results)}/{len(skins)} skins")
